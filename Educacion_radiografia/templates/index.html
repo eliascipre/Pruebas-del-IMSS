@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<!--
+ Copyright 2025 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explicador de Reportes Radiológicos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&family=Google+Sans+Text:wght@500&display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        rel="stylesheet">
+    <!-- Link to the correct JS file -->
+    <script src="https://unpkg.com/compromise" defer></script>
+    <script src="{{ url_for('static', filename='js/demo.js') }}" defer></script>
+</head>
+
+<body>
+    <div class="info">
+        <!-- New Info Page Content -->
+        <div class="info-page-container">
+            <div class="info-content">
+                <div class="info-header">
+                    <span class="info-title-demo">Demostración de Explicador Radiológico</span><br>
+                    <span class="info-title-demo info-subtitle-demo">Construido con</span>
+                    <span class="info-title-med info-subtitle-demo">MedGemma</span>
+                </div>
+                <div class="info-text">Considera un escenario educativo donde la interacción con una imagen radiológica puede
+                    mejorar sustancialmente el aprendizaje. Esta demostración muestra cómo MedGemma puede ser utilizado para proporcionar
+                    una herramienta útil para explorar imágenes radiológicas y reportes asociados traduciéndolos a
+                    lenguaje simple, con pistas visuales para resaltar las áreas relevantes de la imagen.</div>
+                <div class="info-disclaimer-text"><span class="info-disclaimer-title">Descargo de Responsabilidad</span> Esta
+                    demostración es únicamente para fines ilustrativos y no representa un producto terminado o aprobado.
+                    No es representativa del cumplimiento de regulaciones o estándares de
+                    calidad, seguridad o eficacia. Cualquier aplicación del mundo real requeriría desarrollo adicional,
+                    entrenamiento y adaptación. La experiencia destacada en esta demo muestra la capacidad básica de MedGemma
+                    para la tarea mostrada y está destinada a ayudar a desarrolladores y usuarios a explorar posibles
+                    aplicaciones e inspirar mayor desarrollo.</div>
+                <button class="info-button" id="view-demo-button">Ver Demostración</button>
+            </div>
+        </div>
+    </div>
+    <div class="main">
+            <div class="nav-button nav-button-back" id="back-to-info-button">
+                <div class="nav-button-inner">
+                    <span class="material-symbols-outlined nav-button-icon">keyboard_arrow_left</span>
+                    <span class="nav-button-text">Atrás</span>
+                </div>
+            </div>
+            <div class="case-selector-tabs-container" id="case-selector-tabs-container">
+                    <div>Rayos X</div>
+                    <div class="case-selector-tabs" id="case-selector-tabs">
+                        {% if available_reports %}
+                        {% for report in available_reports %}
+                        {% if report.image_type == 'CXR' %}
+                        <div class="nav-button nav-button-case" data-report-name="{{ report.name }}">
+                            <div class="nav-button-inner">
+                                <span class="nav-button-text">{{ report.name }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                        {% else %}
+                        <span class="no-cases-available">No hay casos disponibles</span>
+                        {% endif %}
+                    </div>
+
+                    <div>CT</div>
+                    <div class="case-selector-tabs" id="case-selector-tabs2">
+                        {% if available_reports %}
+                        {% for report in available_reports %}
+                        {% if report.image_type == 'CT' %}
+                        <div class="nav-button nav-button-case" data-report-name="{{ report.name }}">
+                            <div class="nav-button-inner">
+                                <span class="nav-button-text">{{ report.name }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                        {% else %}
+                        <span class="no-cases-available">No hay casos disponibles</span>
+                        {% endif %}
+                    </div>
+
+            </div>
+            <div class="nav-button nav-button-info" id="info-button">
+                <div class="nav-button-inner">
+                    <span class="material-symbols-outlined nav-button-icon">code_blocks</span>
+                    <span class="nav-button-text">Detalles sobre esta Demo</span>
+                </div>
+            </div>
+ 
+
+
+        <div class="image-section">
+            <div id="image-modality-header" class="image-header">{{ image_type | default('Imagen Médica', true) }}
+            </div> <!-- Updated: ID added, initial text changed -->
+            <div id="image-container" class="image-container"> <!-- Container for relative positioning -->
+                <img id="report-image" src="" alt="Imagen Médica" style="display: none;">
+                <div id="image-loading" class="loading" style="display: none;">Cargando imagen...</div>
+                <div id="image-error" class="error-message" style="display: none;"></div>
+            </div>
+            <div id="ct-image-note" class="image-note">
+                Esto muestra una sola sección de la TC. No todos los elementos del reporte pueden ser visualizados.
+            </div>
+        </div>
+
+        <div class="report-section">
+            <div id="app-loading" class="loading" style="display: none;">Cargando detalles del reporte...</div>
+            <div id="app-error" class="error-message" style="display: none;"></div>
+            <div class="explanation-section">
+                <div id="explanation-output" class="explanation-box">
+                    <div id="explanation-loading" class="loading">Generando explicación... Por favor espera.</div>
+                    <div class="explanation-header">Qué significa esto
+                    </div>
+                    <div id="explanation-content">
+                        Haz clic en una oración para ver la explicación aquí.
+                    </div>
+                </div>
+            </div>
+            <div class="report-text-area">
+            <div id="report-text-display" >
+                <!-- El texto del reporte se cargará aquí -->
+                Selecciona un reporte para ver su texto.
+            </div>
+            <div class="floating-disclaimer">
+                <span class="material-symbols-outlined disclaimer-icon">warning</span>
+                <span class="disclaimer-text">Esta demostración es únicamente para fines ilustrativos de la capacidad básica de MedGemma.
+                    No representa un producto terminado o aprobado, no está destinado a
+                    diagnosticar o sugerir tratamiento de ninguna enfermedad o condición, y no debe ser utilizado para consejo
+                    médico.</span>
+            </div>
+            </div>
+        </div>
+    <!-- Embed available reports data for JavaScript -->
+    <script id="reports-data" type="application/json">
+            {{ available_reports | tojson | safe }}
+        </script>
+    <div id="explanation-error" class="error-message" style="display: none;"></div>
+    </div>
+
+    <!-- Immersive Info Dialog -->
+    <div id="immersive-info-dialog" class="dialog-overlay" style="display: none;" role="dialog" aria-modal="true"
+        aria-labelledby="dialog-title">
+        <div class="dialog-box">
+            <button id="dialog-close-button" class="dialog-close-btn" aria-label="Close dialog">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <h2 id="dialog-title" class="dialog-title-text">Detalles Sobre Esta Demo</h2>
+            <div class="dialog-body-scrollable">
+                <p><b>El Modelo:</b> Esta demo presenta exclusivamente MedGemma-4B de Google, un modelo basado en Gemma 3
+                    ajustado para
+                    comprender texto e imágenes médicas, como radiografías de tórax. Demuestra la capacidad de MedGemma para
+                    acelerar el desarrollo de aplicaciones de salud impulsadas por IA ofreciendo interpretación avanzada
+                    de datos médicos.</p>
+                <p><b>Accessing and Using the Model:</b> Google's MedGemma-4B is available on <a
+                        href="https://huggingface.co/google/medgemma-4b-it" target="_blank">HuggingFace<img
+                            class="hf-logo"
+                            src="https://huggingface.co/datasets/huggingface/brand-assets/resolve/main/hf-logo.svg">
+                    </a> and
+                    <a href="https://console.cloud.google.com/vertex-ai/publishers/google/model-garden/medgemma" target="_blank">Model
+                        Garden <img class="hf-logo"
+                            src="https://www.gstatic.com/cloud/images/icons/apple-icon.png"></a>.
+                    Learn more about using the model and its limitations on the <a
+                        href="https://developers.google.com/health-ai-developer-foundations?referral=rad_explain"
+                        target="_blank">HAI-DEF
+                        developer site</a>.
+                </p>
+                <p><b>Health AI Developer Foundations (HAI-DEF)</b> provides a collection of open-weight models and
+                    companion resources to empower developers in building AI models for healthcare.</p>
+                <p><b>Enjoying the Demo?</b> We'd love your feedback! If you found this demo helpful, please show
+                    your appreciation by clicking the ♡ button on the HuggingFace page, linked at the top.</p>
+                <p><b>Explore More Demos:</b> Discover additional demonstrations on HuggingFace Spaces or via Colabs:
+                </p>
+                <ul>
+                    <li><a href="https://huggingface.co/spaces/google/cxr-foundation-demo?referral=rad_explain"
+                            target="_blank">
+                            CXR Foundations Demo <img class="hf-logo"
+                                src="https://huggingface.co/datasets/huggingface/brand-assets/resolve/main/hf-logo.svg"></a>
+                        -
+                        Showcases on-browser, data-efficient, and zero-shot classification of CXR images.</li>
+                    <li><a href="https://huggingface.co/spaces/google/path-foundation-demo?referral=rad_explain"
+                            target="_blank">
+                            Path Foundations Demo <img class="hf-logo"
+                                src="https://huggingface.co/datasets/huggingface/brand-assets/resolve/main/hf-logo.svg"></a>
+                        -
+                        Highlights on-browser, data-efficient classification and outlier detection within pathology
+                        slides.</li>
+                    <li><a href="https://github.com/Google-Health/medgemma/tree/main/notebooks/fine_tune_with_hugging_face.ipynb" target="_blank">
+                            Finetune MedGemma Colab <img class="hf-logo"
+                                src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Colaboratory_SVG_Logo.svg"></a>
+                        -
+                        See an example of how to fine-tune this model.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
