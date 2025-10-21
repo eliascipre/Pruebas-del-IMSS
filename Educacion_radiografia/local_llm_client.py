@@ -28,7 +28,7 @@ def init_llm_client():
     
     # Usar configuración local en lugar de variables de entorno externas
     _api_key = "lm-studio"  # API key para LM Studio
-    _endpoint_url = "http://192.168.1.23:1234/v1"  # URL de MedGemma local
+    _endpoint_url = "http://localhost:1234/v1"  # URL de MedGemma local
     _initialized = True
     logger.info("Local MedGemma LLM client configured successfully.")
 

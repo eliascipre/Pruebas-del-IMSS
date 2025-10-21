@@ -443,12 +443,6 @@ const Interview = ({ selectedPatient, selectedCondition, onBack }) => {
                 )}
               </div>
             </div>
-            <div className="disclaimer-container">
-              <i className="material-icons warning-icon">warning</i>
-              <div className="disclaimer-text">
-                Esta demostración es solo para fines ilustrativos de las capacidades básicas de MedGemma. No representa un producto terminado o aprobado, no está destinada a diagnosticar o sugerir tratamiento de ninguna enfermedad o condición, y no debe usarse para consejo médico.
-              </div>
-            </div>
           </div>
         </div>
       </div>

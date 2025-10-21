@@ -2,7 +2,7 @@
     "patients": [
         {
             "id": 1,
-            "name": "Jordon Dubois",
+            "name": "Alejandro",
             "gender": "Male",
             "age": 35,
             "existing_condition": "Depression",
@@ -14,7 +14,7 @@
         },
         {
             "id": 2,
-            "name": "Alex Sharma",
+            "name": "Lupita",
             "gender": "Female",
             "age": 63,
             "existing_condition": "Diabetes",
@@ -26,7 +26,7 @@
         },
         {
             "id": 3,
-            "name": "Sacha Silva",
+            "name": "Jessica",
             "gender": "Female",
             "age": 24,
             "existing_condition": "Asthma",

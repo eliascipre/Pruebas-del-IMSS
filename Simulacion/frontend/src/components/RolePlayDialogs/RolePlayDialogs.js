@@ -31,20 +31,20 @@ const RolePlayDialogs = ({
       <div className="headerButtonsContainer">
         <button className="back-button" onClick={onBack}>
           <i className="material-icons back-button-icon">keyboard_arrow_left</i>
-          Back
+          Atrás
         </button>
         <button className="details-button" onClick={() => setIsDetailsPopupOpen(true)}>
-          <i className="material-icons code-block-icon">code</i>&nbsp; Details
-          about this Demo
+          <i className="material-icons code-block-icon">code</i>&nbsp; Detalles
+          sobre esta Demo
         </button>
       </div>
       <div className="frame role-play-container">
-        <div className="title-header">What’s happening in this simulation</div>
+        <div className="title-header">¿Qué está pasando en esta simulación?</div>
         <div className="dialogs-container">
           <div className="dialog-box">
-            <div className="dialog-title-text">Pre-visit AI agent</div>
+            <div className="dialog-title-text">Agente de IA Pre-visita</div>
             <div className="dialog-subtitle">
-              Built with: <img src="assets/medgemma.avif" height="16px" />{" "}
+              Construido con: <img src="assets/medgemma.avif" height="16px" />{" "}
               27b
             </div>
             <img
@@ -53,20 +53,20 @@ const RolePlayDialogs = ({
               className="ai-avatar"
             />
             <div className="dialog-body-scrollable">
-              In this demo, MedGemma functions as an AI agent designed to assist in pre-visit information
-              collection. It will interact with the patient agent to gather relevant data.
-              To provide additional context, MedGemma also has access to information from the patient's EHR (in FHIR format).
-              However, MedGemma is not provided the specific diagnois ({selectedCondition}).
-              MedGemma's goal is to gather details about symptoms, relevant history,
-              and current concerns to generate a comprehensive pre-visit report. 
+              En esta demo, MedGemma funciona como un agente de IA diseñado para asistir en la recopilación de información
+              pre-visita. Interactuará con el agente del paciente para recopilar datos relevantes.
+              Para proporcionar contexto adicional, MedGemma también tiene acceso a información del EHR del paciente (en formato FHIR).
+              Sin embargo, a MedGemma no se le proporciona el diagnóstico específico ({selectedCondition}).
+              El objetivo de MedGemma es recopilar detalles sobre síntomas, historial relevante,
+              y preocupaciones actuales para generar un reporte pre-visita comprensivo. 
             </div>
           </div>
           <div className="dialog-box">
             <div className="dialog-title-text">
-              Patient persona: {selectedPatient.name}
+              Persona del Paciente: {selectedPatient.name}
             </div>
             <div className="dialog-subtitle">
-              Simulated by:{" "}Gemini 2.5 Flash
+              Simulado por:{" "}Gemini 2.5 Flash
             </div>
             <img
               src={selectedPatient.headshot}
@@ -74,22 +74,22 @@ const RolePlayDialogs = ({
               className="patient-avatar"
             />
             <div className="dialog-body-scrollable">
-              Gemini is provided a persona and information to play the role of the patient, {selectedPatient.name}.
-              In this simulation, the patient agent does not know their diagnosis,
-              but is experiencing related symptoms and concerns that can be shared during the interview. 
-              To simulate a real-world situation with confounding information, additional information unrelated to the presenting condition has also been provided. 
+              Se le proporciona a Gemini una persona e información para interpretar el rol del paciente, {selectedPatient.name}.
+              En esta simulación, el agente del paciente no conoce su diagnóstico,
+              pero está experimentando síntomas y preocupaciones relacionadas que pueden compartirse durante la entrevista. 
+              Para simular una situación del mundo real con información confusa, también se ha proporcionado información adicional no relacionada con la condición presente. 
             </div>
           </div>
         </div>
         <div className="report-notice">
-          As the conversation develops, MedGemma <span className="highlight">creates and continually updates
-          a real-time pre-visit report</span> capturing relevant
-          information. Following pre-visit report generation, an evaluation is available. The purpose of this evaluation is to provide the viewer insights into quality of the output.
-          For this evaluation, MedGemma is provided the previously unknown reference diagnosis, and is prompted to generate a 
-          <span className="highlight">self evaluation that highlights strengths as well opportunities where the conversation and report could have been improved.</span>
+          A medida que se desarrolla la conversación, MedGemma <span className="highlight">crea y actualiza continuamente
+          un reporte pre-visita en tiempo real</span> que captura información
+          relevante. Después de la generación del reporte pre-visita, está disponible una evaluación. El propósito de esta evaluación es proporcionar al espectador información sobre la calidad de la salida.
+          Para esta evaluación, a MedGemma se le proporciona el diagnóstico de referencia previamente desconocido, y se le solicita generar una 
+          <span className="highlight">autoevaluación que destaque fortalezas así como oportunidades donde la conversación y el reporte podrían haber sido mejorados.</span>
         </div>
         <button className="info-button" onClick={onStart}>
-          Start conversation
+          Iniciar conversación
         </button>
       </div>
       <DetailsPopup

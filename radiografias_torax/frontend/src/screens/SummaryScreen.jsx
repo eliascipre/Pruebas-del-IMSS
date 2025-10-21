@@ -130,13 +130,6 @@ const SummaryScreen = ({journey, onNavigate, onShowDetails, cachedImage, summary
 								</div>
 							)}
 						</div>
-						<div className={styles.disclaimerBox}>
-							<IconWarning className={styles.disclaimerIcon}/>
-							<p className={styles.disclaimerText}>This demonstration is for illustrative purposes of MedGemma’s
-								baseline capabilities only. It does not represent a finished or approved product, is not intended to
-								diagnose or suggest treatment of any disease or condition, and should not be used for medical
-								advice.</p>
-						</div>
 					</div>
 				</main>
 			</div>

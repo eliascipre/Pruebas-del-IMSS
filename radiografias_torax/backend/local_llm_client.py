@@ -60,7 +60,7 @@ class LLMClient(ABC):
         try:
             # 2. Make the API call
             response_dict = self._make_chat_completion_request(
-                model="medgemma-4b-it",  # MedGemma model with vision support
+                model="medgemma-4b-it-mlx",  # MedGemma model with vision support
                 messages=messages,
                 temperature=0,
                 max_tokens=8192

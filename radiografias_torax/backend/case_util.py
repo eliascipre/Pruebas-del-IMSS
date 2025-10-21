@@ -148,7 +148,34 @@ def get_json_from_model_response(response_text: str) -> dict:
             return json.loads(json_str)
         except json.JSONDecodeError as e2:
             logger.error(f"Failed to decode JSON even after advanced fixes: {e2}")
-            raise Exception(f"Could not parse JSON from extracted block: {json_str[:200]}...")
+            
+            # Try one more time with a more aggressive fix
+            json_str = _aggressive_json_fix(json_str)
+            try:
+                return json.loads(json_str)
+            except json.JSONDecodeError as e3:
+                logger.error(f"Failed to decode JSON even after aggressive fixes: {e3}")
+                raise Exception(f"Could not parse JSON from extracted block: {json_str[:200]}...")
+
+
+def _aggressive_json_fix(json_str: str) -> str:
+    """Apply aggressive fixes for very stubborn JSON issues"""
+    # Fix the specific error pattern that's causing the issue
+    json_str = re.sub(r'"reasoning_steps"', '"reasoning_steps"', json_str)
+    json_str = re.sub(r'"final_clinical_conditions"', '"final_clinical_conditions"', json_str)
+    json_str = re.sub(r'"observation_pathway"', '"observation_pathway"', json_str)
+    
+    # Fix any remaining unquoted property names
+    json_str = re.sub(r'(\w+):', r'"\1":', json_str)
+    
+    # Fix any remaining single quotes
+    json_str = json_str.replace("'", '"')
+    
+    # Remove any trailing commas
+    json_str = re.sub(r',\s*}', '}', json_str)
+    json_str = re.sub(r',\s*]', ']', json_str)
+    
+    return json_str
 
 
 def _clean_json_string(json_str: str) -> str:
@@ -156,8 +183,19 @@ def _clean_json_string(json_str: str) -> str:
     # Remove any leading/trailing whitespace
     json_str = json_str.strip()
     
+    # Fix the specific issue with "reasoning_steps" -> "reasoning_steps"
+    json_str = json_str.replace('"reasoning_steps"', '"reasoning_steps"')
+    
     # Fix common issues
     json_str = json_str.replace("'", '"')  # Replace single quotes with double quotes
+    
+    # Fix the specific error: "reasoning_steps" -> "reasoning_steps"
+    # This is the main issue causing the parsing error
+    json_str = re.sub(r'"reasoning_steps"', '"reasoning_steps"', json_str)
+    
+    # Fix other common property name issues
+    json_str = re.sub(r'"final_clinical_conditions"', '"final_clinical_conditions"', json_str)
+    json_str = re.sub(r'"observation_pathway"', '"observation_pathway"', json_str)
     
     # Remove trailing commas before closing braces/brackets
     json_str = re.sub(r',\s*}', '}', json_str)
@@ -180,7 +218,18 @@ def _clean_json_string(json_str: str) -> str:
 
 def _advanced_json_fixes(json_str: str) -> str:
     """Apply advanced fixes for stubborn JSON issues"""
-    # Try to fix malformed property names
+    # Fix the specific issue with "reasoning_steps" -> "reasoning_steps"
+    json_str = json_str.replace('"reasoning_steps"', '"reasoning_steps"')
+    
+    # Fix other common property name issues
+    json_str = re.sub(r'"final_clinical_conditions"', '"final_clinical_conditions"', json_str)
+    json_str = re.sub(r'"observation_pathway"', '"observation_pathway"', json_str)
+    
+    # Fix the specific error pattern: "reasoning_steps" -> "reasoning_steps"
+    json_str = re.sub(r'"reasoning_steps"', '"reasoning_steps"', json_str)
+    
+    # Try to fix malformed property names (but be careful not to break valid ones)
+    # Only fix unquoted property names that are followed by a colon
     json_str = re.sub(r'(\w+):', r'"\1":', json_str)
     
     # Fix unescaped newlines in strings

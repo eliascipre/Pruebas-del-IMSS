@@ -26,48 +26,33 @@ const DetailsPopup = ({ isOpen, onClose }) => {
     <div className="popup-overlay" onClick={onClose}>
       <div className="popup-content" onClick={(e) => e.stopPropagation()}>
         <button className="popup-close-button" onClick={onClose}>&times;</button>
-        <h2 id="dialog-title" className="dialog-title-text">Details About This Demo</h2>
-                <p><b>The Model:</b> This demo features Google's MedGemma-27B, a Gemma 3-based model
-                    fine-tuned for comprehending medical text. It demonstrates MedGemma's ability to
-                    accelerate the development of AI-powered healthcare applications by offering advanced
-                    interpretation of medical data.</p>
-                <p><b>Accessing and Using the Model:</b> Google's MedGemma-27B is available on <a
-                        href="https://huggingface.co/google/medgemma-27b-text-it" target="_blank" rel="noopener noreferrer">HuggingFace<img
-                            className="hf-logo"
-                            src="https://huggingface.co/datasets/huggingface/brand-assets/resolve/main/hf-logo.svg" />
-                    </a> and is easily deployable via&nbsp;
-                    <a href="https://console.cloud.google.com/vertex-ai/publishers/google/model-garden/medgemma" target="_blank" rel="noopener noreferrer">Model
-                        Garden <img className="hf-logo"
-                            src="https://www.gstatic.com/cloud/images/icons/apple-icon.png" /></a>.
-                    Learn more about using the model and its limitations on the <a
-                        href="https://developers.google.com/health-ai-developer-foundations?referral=appoint-ready"
-                        target="_blank" rel="noopener noreferrer">HAI-DEF
-                        developer site</a>.
-                </p>
-                <p><b>Health AI Developer Foundations (HAI-DEF)</b> provides a collection of open-weight models and
-                    companion resources to empower developers in building AI models for healthcare.</p>
-                <p><b>Share this Demo:</b> If you find this demonstration valuable, we encourage you to share it on
-                    social media.
-                    <small>
-                    &nbsp;<a href="https://www.linkedin.com/shareArticle?mini=true&url=https://huggingface.co/spaces/google/appoint-ready&text=%23MedGemma%20%23MedGemmaDemo" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-                    &nbsp;<a href="http://www.twitter.com/share?url=https://huggingface.co/spaces/google/appoint-ready&hashtags=MedGemma,MedGemmaDemo" target="_blank" rel="noopener noreferrer">X/Tweet</a>
-                    </small>
-                </p>
-                <p><b>Explore More Demos:</b> Discover additional demonstrations on HuggingFace Spaces or via Colabs:
-                </p>
-                <ul>
-                    <li><a href="https://huggingface.co/collections/google/hai-def-concept-apps-6837acfccce400abe6ec26c1"
-                            target="_blank" rel="noopener noreferrer">
-                            Collection of concept apps <img className="hf-logo" src="https://huggingface.co/datasets/huggingface/brand-assets/resolve/main/hf-logo.svg" />
-                        </a> built around HAI-DEF open models to inspire the community.</li>
-                    <li><a href="https://github.com/Google-Health/medgemma/tree/main/notebooks/fine_tune_with_hugging_face.ipynb" target="_blank" rel="noopener noreferrer">
-                            Finetune MedGemma Colab <img className="hf-logo"
-                                src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Colaboratory_SVG_Logo.svg" /></a>
-                        -
-                        See an example of how to fine-tune this model.</li> 
-                </ul>
-                For more technical details about this demo, please refer to the <a href="https://huggingface.co/spaces/google/appoint-ready/blob/main/README.md#table-of-contents" target="_blank" rel="noopener noreferrer">README</a> file in the repository.
-        <button className="popup-button" onClick={onClose}>Close</button>
+        <h2 id="dialog-title" className="dialog-title-text">¿Qué está pasando en esta simulación?</h2>
+        
+        <div className="simulation-info">
+          <div className="agent-section">
+            <div className="agent-header">
+              <div className="agent-icon">🤖</div>
+              <h3>Agente de IA Pre-visita</h3>
+              <p className="agent-subtitle">Construido con: MedGemma 27b</p>
+            </div>
+            <p>En esta demo, MedGemma funciona como un agente de IA diseñado para asistir en la recopilación de información pre-visita. Interactuará con el agente del paciente para recopilar datos relevantes. Para proporcionar contexto adicional, MedGemma también tiene acceso a información del EHR del paciente (en formato FHIR). Sin embargo, a MedGemma no se le proporciona el diagnóstico específico (Migraña). El objetivo de MedGemma es recopilar detalles sobre síntomas, historial relevante y preocupaciones actuales para generar un reporte pre-visita comprensivo.</p>
+          </div>
+
+          <div className="patient-section">
+            <div className="patient-header">
+              <div className="patient-avatar">👤</div>
+              <h3>Persona del Paciente: Jordon Dubois</h3>
+              <p className="patient-subtitle">Simulado por: Gemini 2.5 Flash</p>
+            </div>
+            <p>Se le proporciona a Gemini una persona e información para interpretar el rol del paciente, Jordon Dubois. En esta simulación, el agente del paciente no conoce su diagnóstico, pero está experimentando síntomas y preocupaciones relacionadas que pueden compartirse durante la entrevista. Para simular una situación del mundo real con información confusa, también se ha proporcionado información adicional no relacionada con la condición presente.</p>
+          </div>
+
+          <div className="process-description">
+            <p>A medida que se desarrolla la conversación, MedGemma crea y actualiza continuamente un reporte pre-visita en tiempo real que captura información relevante. Después de la generación del reporte pre-visita, está disponible una evaluación. El propósito de esta evaluación es proporcionar al espectador información sobre la calidad de la salida. Para esta evaluación, a MedGemma se le proporciona el diagnóstico de referencia previamente desconocido, y se le solicita generar una autoevaluación que destaque fortalezas así como oportunidades donde la conversación y el reporte podrían haber sido mejorados.</p>
+          </div>
+        </div>
+        
+        <button className="popup-button" onClick={onClose}>Cerrar</button>
       </div>
     </div>
   );
