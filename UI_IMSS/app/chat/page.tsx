@@ -14,6 +14,271 @@ interface Message {
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
+  const [sessionId, setSessionId] = useState<string>("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+
+  const formatMarkdown = (text: string): string => {
+    // Primero, detectar y arreglar tablas que tienen filas sin | al inicio
+    const lines = text.split('\n')
+    let inTable = false
+    const fixedLines: string[] = []
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      
+      // Detectar si estamos en una tabla (tiene | en algún lugar)
+      if (line.includes('|') && !line.includes('```')) {
+        inTable = true
+        
+        // Si la línea tiene | pero no empieza con |, agregarlo
+        if (!line.trim().startsWith('|') && line.trim().includes('|')) {
+          const trimmedLine = line.trim()
+          // Si termina con |, agregar | al inicio
+          if (trimmedLine.endsWith('|')) {
+            fixedLines.push('|' + trimmedLine)
+          } else {
+            // Si no termina con |, arreglar ambos
+            const fixedLine = '|' + trimmedLine + (trimmedLine.includes('|') ? '' : '|')
+            fixedLines.push(fixedLine)
+          }
+        } else {
+          fixedLines.push(line)
+        }
+      } else if (inTable && !line.trim() && i + 1 < lines.length && lines[i + 1] && !lines[i + 1].includes('|')) {
+        // Salir de la tabla si hay línea vacía y la siguiente no es tabla
+        inTable = false
+        fixedLines.push(line)
+      } else {
+        fixedLines.push(line)
+      }
+    }
+    
+    const fixedText = fixedLines.join('\n')
+    
+    // Convertir markdown a HTML básico
+    let html = fixedText
+      // Bold **text** -> <strong>text</strong>
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Listas con * al inicio de línea -> <ul><li> (antes que texto normal con *)
+      .replace(/^\*\s+(.*)$/gm, '<li>$1</li>')
+      // Agrupar listas consecutivas
+      .replace(/(<li>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`)
+      // Encabezados ## -> <h3>
+      .replace(/^###\s+(.*$)/gm, '<h3>$1</h3>')
+      .replace(/^##\s+(.*$)/gm, '<h2>$1</h2>')
+      .replace(/^#\s+(.*$)/gm, '<h1>$1</h1>')
+      // Italic *text* -> <em>text</em> (después de listas)
+      .replace(/\*([^*]+?)\*/g, (match, content) => {
+        // Solo si no empieza con espacio (para no afectar listas)
+        return content.startsWith(' ') || content.endsWith(' ') ? match : `<em>${content}</em>`
+      })
+    
+    // Procesar tablas - convertir | a HTML table
+    const htmlLines = html.split('\n')
+    let tableHTML = ''
+    let tableRows: string[] = []
+    let inTableMode = false
+    
+    for (let i = 0; i < htmlLines.length; i++) {
+      const line = htmlLines[i]
+      
+      if (line.trim().includes('|') && !line.includes('```')) {
+        if (!inTableMode) {
+          // Iniciar tabla
+          inTableMode = true
+          tableRows = []
+        }
+        
+        // Limpiar la línea y procesar
+        const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell)
+        
+        // Ignorar filas separadoras (solo contienen -)
+        if (!cells.every(cell => /^-+$/.test(cell))) {
+          tableRows.push(cells)
+        }
+      } else {
+        // Si estaba en modo tabla, cerrar la tabla
+        if (inTableMode && tableRows.length > 0) {
+          tableHTML += '<table class="border-collapse border border-gray-300 my-4"><tbody>'
+          
+          for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
+            const row = tableRows[rowIdx]
+            const isHeader = rowIdx === 0
+            
+            tableHTML += `<tr${isHeader ? ' class="bg-gray-100 font-semibold"' : ''}>`
+            row.forEach(cell => {
+              const tag = isHeader ? 'th' : 'td'
+              tableHTML += `<${tag} class="border border-gray-300 px-3 py-2">${cell}</${tag}>`
+            })
+            tableHTML += '</tr>'
+            
+            // Agregar separador después del header
+            if (isHeader && rowIdx === 0 && tableRows.length > 1) {
+              tableHTML += '<tr>'
+              row.forEach(() => {
+                tableHTML += '<td class="border border-gray-300 px-0 py-0 h-1 bg-gray-400"></td>'
+              })
+              tableHTML += '</tr>'
+            }
+          }
+          
+          tableHTML += '</tbody></table>'
+          tableRows = []
+          inTableMode = false
+        }
+        
+        // Agregar línea normal
+        tableHTML += (tableHTML ? '\n' : '') + line
+      }
+    }
+    
+    // Si termina en modo tabla, cerrarla
+    if (inTableMode && tableRows.length > 0) {
+      tableHTML += '<table class="border-collapse border border-gray-300 my-4"><tbody>'
+      tableRows.forEach((row, rowIdx) => {
+        const isHeader = rowIdx === 0
+        tableHTML += `<tr${isHeader ? ' class="bg-gray-100 font-semibold"' : ''}>`
+        row.forEach(cell => {
+          const tag = isHeader ? 'th' : 'td'
+          tableHTML += `<${tag} class="border border-gray-300 px-3 py-2">${cell}</${tag}>`
+        })
+        tableHTML += '</tr>'
+      })
+      tableHTML += '</tbody></table>'
+    }
+    
+    // Finalmente, convertir saltos de línea
+    return tableHTML.replace(/\n/g, '<br/>')
+  }
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validar que sea una imagen
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona una imagen')
+      return
+    }
+
+    // Leer imagen como base64
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64String = reader.result as string
+      // Remover el prefijo data:image/...;base64,
+      const base64 = base64String.split(',')[1] || base64String
+      setSelectedImage(base64)
+      setImagePreview(base64String) // Para preview
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null)
+    setImagePreview(null)
+  }
+
+  const handleSendMessage = async () => {
+    if (!input.trim() && !selectedImage) return
+    if (isLoading) return
+
+    const userMessage = input.trim() || "Analiza esta radiografía médica"
+    setInput("")
+    setImagePreview(null)
+    const imageToSend = selectedImage
+    setSelectedImage(null)
+    setIsLoading(true)
+
+    // Agregar mensaje del usuario (mostrar texto o indicar que hay imagen)
+    setMessages(prev => [...prev, { 
+      role: 'user', 
+      text: userMessage || '📷 Imagen médica enviada' 
+    }])
+
+    try {
+      // Llamar al backend
+      const response = await fetch('http://localhost:5001/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          image: imageToSend, // Imagen en base64
+          image_format: 'jpeg',
+          session_id: sessionId || undefined,
+          stream: true, // Usar streaming para mejor UX
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al enviar mensaje')
+      }
+
+      // Crear mensaje de asistente vacío
+      let assistantMessage = ""
+      setMessages(prev => [...prev, { role: 'assistant', text: '' }])
+
+      // Leer streaming
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value)
+          const lines = chunk.split('\n')
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6))
+                if (data.content) {
+                  assistantMessage += data.content
+                  // Actualizar último mensaje con contenido acumulado
+                  setMessages(prev => {
+                    const updated = [...prev]
+                    updated[updated.length - 1] = {
+                      role: 'assistant',
+                      text: assistantMessage,
+                    }
+                    return updated
+                  })
+                }
+                if (data.done) {
+                  // Guardar session_id si se recibe
+                  if (data.session_id) {
+                    setSessionId(data.session_id)
+                  }
+                }
+              } catch (e) {
+                // Ignorar errores de parsing
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        text: 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.'
+      }])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
+  }
 
   return (
     <div className="h-screen flex bg-gray-50">
@@ -61,75 +326,8 @@ export default function ChatPage() {
           
           {/* Conversation list */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 hover:bg-blue-100 cursor-pointer">
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-                <span className="text-sm text-gray-700 flex-1">Proyecto Lorem...</span>
-              <button className="p-1 hover:bg-gray-200 rounded">
-                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-              <button className="p-1 hover:bg-gray-200 rounded">
-                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            </div>
-            
-            <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              <span className="text-sm text-gray-700 flex-1">Create html game environment...</span>
-            </div>
-            
-            <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-                <span className="text-sm text-gray-700 flex-1">Proyecto Lorem Ipsum</span>
-            </div>
-            
-            <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-                <span className="text-sm text-gray-700 flex-1">Aplicación de Préstamos Crypto</span>
-            </div>
-            
-            <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-                <span className="text-sm text-gray-700 flex-1">Tipos de Gramática de Operadores</span>
-            </div>
-            
-            <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-                <span className="text-sm text-gray-700 flex-1">Estados Mínimos para DFA Binario</span>
-            </div>
-            
-            <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-                <span className="text-sm text-gray-700 flex-1">Sistema POS Lorem</span>
-            </div>
-
-            <div className="pt-4 border-t border-gray-200 mt-4">
-              <div className="text-xs text-gray-500 mb-2">Últimos 7 días</div>
-              <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
-                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                <span className="text-sm text-gray-700 flex-1">Crear entorno de juego html...</span>
-              </div>
-            </div>
+            {/* Sin conversaciones dummy - lista vacía */}
+            <p className="text-sm text-gray-500 text-center py-8">No hay conversaciones aún</p>
           </div>
         </div>
 
@@ -157,9 +355,9 @@ export default function ChatPage() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Navigation */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-end gap-8">
             <Link href="#" className="text-gray-700 hover:text-[#068959] font-medium">
               Agentes IA
@@ -173,36 +371,30 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Chat Messages Area */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <div className="mb-8">
-            <div className="w-16 h-16 bg-[#068959] rounded-full flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">Q</span>
-            </div>
-          </div>
-          
+        {/* Chat Messages Area - Fixed Scroll */}
+        <div className="flex-1 overflow-y-auto p-8">
           {messages.length === 0 ? (
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">¿Cómo puedo ayudarte hoy?</h2>
-              <p className="text-gray-500 mb-6">Inicia una conversación con nuestro asistente de IA</p>
-              
-              {/* Regenerate response button (if needed) */}
-              <button className="px-4 py-2 border-2 border-[#068959] text-[#068959] rounded-lg hover:bg-[#068959] hover:text-white transition-colors flex items-center gap-2 mx-auto">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Regenerar respuesta
-              </button>
-            </div>
+            <>
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">¿Cómo puedo ayudarte hoy?</h2>
+                  <p className="text-gray-500 mb-6">Inicia una conversación con nuestro asistente de IA</p>
+                </div>
+              </div>
+            </>
           ) : (
-            <div className="flex-1 w-full max-w-4xl space-y-4">
+            <div className="w-full max-w-4xl mx-auto space-y-4">
               {messages.length > 0 && messages.map((msg, idx) => (
                 <div key={idx} className="flex gap-3">
                   <div className={`flex-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                     <div className={`inline-block px-4 py-2 rounded-lg ${
                       msg.role === 'user' ? 'bg-[#068959] text-white' : 'bg-gray-100 text-gray-900'
                     }`}>
-                      {msg.text}
+                      {msg.role === 'assistant' ? (
+                        <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: formatMarkdown(msg.text) }} />
+                      ) : (
+                        msg.text
+                      )}
                     </div>
                   </div>
                 </div>
@@ -211,25 +403,61 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Input Area */}
-        <div className="bg-white border-t border-gray-200 p-6">
+        {/* Input Area - Fixed */}
+        <div className="bg-white border-t border-gray-200 p-6 flex-shrink-0">
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3 border border-gray-200 focus-within:border-[#068959] transition-colors">
-              <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center">
-                <span className="text-xs">🧠</span>
+            <div className="flex flex-col gap-2">
+              {/* Preview de imagen */}
+              {imagePreview && (
+                <div className="relative inline-block">
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    className="max-h-32 rounded-lg"
+                  />
+                  <button
+                    onClick={handleRemoveImage}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              
+              {/* Input area */}
+              <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3 border border-gray-200 focus-within:border-[#068959] transition-colors">
+                <label htmlFor="image-upload" className="cursor-pointer">
+                  <svg className="w-6 h-6 text-gray-400 hover:text-[#068959]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </label>
+                <input
+                  type="file"
+                  id="image-upload"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                  disabled={isLoading}
+                />
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="¿Qué tienes en mente?..."
+                  className="flex-1 bg-transparent outline-none text-gray-900 placeholder-gray-400"
+                  disabled={isLoading}
+                />
+                <button 
+                  onClick={handleSendMessage}
+                  disabled={isLoading || (!input.trim() && !selectedImage)}
+                  className="w-8 h-8 bg-[#068959] rounded-full flex items-center justify-center hover:bg-[#057a4a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </button>
               </div>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="¿Qué tienes en mente?..."
-                className="flex-1 bg-transparent outline-none text-gray-900 placeholder-gray-400"
-              />
-              <button className="w-8 h-8 bg-[#068959] rounded-full flex items-center justify-center hover:bg-[#057a4a] transition-colors">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
             </div>
           </div>
         </div>

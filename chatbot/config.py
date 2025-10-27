@@ -18,5 +18,5 @@ class Config:
     
     # Server
     DEBUG = True
-    PORT = 5000
+    PORT = 5001
 
