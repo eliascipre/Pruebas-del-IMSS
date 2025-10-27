@@ -734,3 +734,4 @@ limitations under the License.
 ---
 
 *Este documento proporciona una visión completa de la suite de aplicaciones de IA médica desarrollada para el IMSS. Para información más específica sobre cada proyecto, consulte los README individuales en cada directorio.*
+
