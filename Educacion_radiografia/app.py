@@ -16,6 +16,7 @@ import os
 import logging
 import sys
 from flask import Flask
+from flask_cors import CORS
 
 # Import configurations and initializers first
 import config # Use relative import assuming app.py is in the rad_explain package
@@ -26,6 +27,16 @@ from cache_store import cache
 def create_app():
     """Creates and configures the Flask application."""
     app = Flask(__name__, static_folder=config.STATIC_DIR)
+    
+    # Configurar CORS para permitir conexiones remotas
+    # Permitir conexiones desde cualquier origen para desarrollo remoto
+    # En producción, configurar con lista específica de orígenes permitidos
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
+    if CORS_ORIGINS == "*":
+        CORS(app, resources={r"/api/*": {"origins": "*"}})
+    else:
+        origins_list = [origin.strip() for origin in CORS_ORIGINS.split(",")]
+        CORS(app, resources={r"/api/*": {"origins": origins_list}})
 
     # --- Configure Logging ---
     # Basic config should be done before creating the app or registering blueprints

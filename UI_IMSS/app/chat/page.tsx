@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 interface Message {
   role: 'user' | 'assistant'
@@ -18,6 +19,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const formatMarkdown = (text: string): string => {
     // Primero, detectar y arreglar tablas que tienen filas sin | al inicio
@@ -101,7 +103,7 @@ export default function ChatPage() {
       } else {
         // Si estaba en modo tabla, cerrar la tabla
         if (inTableMode && tableRows.length > 0) {
-          tableHTML += '<table class="border-collapse border border-gray-300 my-4"><tbody>'
+          tableHTML += '<div class="overflow-x-auto"><table class="border-collapse border border-gray-300 my-4 w-full min-w-full"><tbody>'
           
           for (let rowIdx = 0; rowIdx < tableRows.length; rowIdx++) {
             const row = tableRows[rowIdx]
@@ -124,7 +126,7 @@ export default function ChatPage() {
             }
           }
           
-          tableHTML += '</tbody></table>'
+          tableHTML += '</tbody></table></div>'
           tableRows = []
           inTableMode = false
         }
@@ -136,7 +138,7 @@ export default function ChatPage() {
     
     // Si termina en modo tabla, cerrarla
     if (inTableMode && tableRows.length > 0) {
-      tableHTML += '<table class="border-collapse border border-gray-300 my-4"><tbody>'
+      tableHTML += '<div class="overflow-x-auto"><table class="border-collapse border border-gray-300 my-4 w-full min-w-full"><tbody>'
       tableRows.forEach((row, rowIdx) => {
         const isHeader = rowIdx === 0
         tableHTML += `<tr${isHeader ? ' class="bg-gray-100 font-semibold"' : ''}>`
@@ -146,7 +148,7 @@ export default function ChatPage() {
         })
         tableHTML += '</tr>'
       })
-      tableHTML += '</tbody></table>'
+      tableHTML += '</tbody></table></div>'
     }
     
     // Finalmente, convertir saltos de línea
@@ -198,8 +200,22 @@ export default function ChatPage() {
     }])
 
     try {
+      // Detectar la URL del backend dinámicamente
+      const getBackendUrl = () => {
+        // Si estamos en el cliente, usar la misma URL base del navegador
+        if (typeof window !== 'undefined') {
+          const protocol = window.location.protocol
+          const hostname = window.location.hostname
+          // Si la UI corre en un puerto diferente, usar el hostname actual
+          // y asumir que los servicios están en el mismo host con diferentes puertos
+          return `${protocol}//${hostname}:5001`
+        }
+        // Fallback para SSR (aunque esta es una página client-side)
+        return process.env.NEXT_PUBLIC_CHATBOT_URL || 'http://localhost:5001'
+      }
+      
       // Llamar al backend
-      const response = await fetch('http://localhost:5001/api/chat', {
+      const response = await fetch(`${getBackendUrl()}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

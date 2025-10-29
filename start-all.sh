@@ -2,8 +2,7 @@
 
 # 🚀 Script de Inicio Unificado - Suite IMSS
 # Este script levanta todos los servicios localmente con un solo comando
-
-set -e
+# Basado en start-ultra-simple.sh que funcionaba correctamente
 
 # Colores para output
 RED='\033[0;31m'
@@ -32,7 +31,7 @@ print_error() {
 # Función para verificar si un puerto está en uso
 check_port() {
     local port=$1
-    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null ; then
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         return 0  # Puerto en uso
     else
         return 1  # Puerto libre
@@ -69,63 +68,23 @@ wait_for_service() {
         attempt=$((attempt + 1))
     done
     
-    print_error "$service_name no respondió después de $max_attempts intentos"
+    print_warning "$service_name no respondió después de $max_attempts intentos (puede estar iniciándose)"
     return 1
 }
 
-# Función para iniciar un servicio Flask
-start_flask_service() {
-    local service_name=$1
-    local port=$2
-    local directory=$3
-    local app_file=$4
+# Función principal para ejecutar comando en background con logs
+# Similar a run_bg de start-ultra-simple.sh pero con mejor logging
+run_bg() {
+    local name=$1
+    local cmd=$2
+    local log_file="logs/${name}.log"
+    local pid_file="logs/${name}.pid"
     
-    print_status "Iniciando $service_name en puerto $port..."
-    
-    cd "$directory"
-    
-    # Verificar que el archivo existe
-    if [ ! -f "$app_file" ]; then
-        print_error "Archivo $app_file no encontrado en $directory"
-        return 1
-    fi
-    
-    # Iniciar servicio en background
-    nohup python "$app_file" > "../logs/${service_name}.log" 2>&1 &
+    print_status "Iniciando $name..."
+    nohup bash -c "$cmd" > "$log_file" 2>&1 &
     local pid=$!
-    echo $pid > "../logs/${service_name}.pid"
-    
-    print_success "$service_name iniciado con PID $pid"
-    return 0
-}
-
-# Función para iniciar el servicio Next.js
-start_nextjs_service() {
-    local port=$1
-    local directory=$2
-    
-    print_status "Iniciando Gateway Next.js en puerto $port..."
-    
-    cd "$directory"
-    
-    # Verificar que package.json existe
-    if [ ! -f "package.json" ]; then
-        print_error "package.json no encontrado en $directory"
-        return 1
-    fi
-    
-    # Instalar dependencias si es necesario
-    if [ ! -d "node_modules" ]; then
-        print_status "Instalando dependencias de Next.js..."
-        npm install
-    fi
-    
-    # Iniciar servicio en background
-    nohup npm run dev > "../logs/gateway.log" 2>&1 &
-    local pid=$!
-    echo $pid > "../logs/gateway.pid"
-    
-    print_success "Gateway Next.js iniciado con PID $pid"
+    echo $pid > "$pid_file"
+    print_success "$name iniciado (PID: $pid)"
     return 0
 }
 
@@ -136,7 +95,7 @@ show_status() {
     echo "📊 ESTADO DE LOS SERVICIOS"
     echo "=========================================="
     
-    local services=("Gateway:3000" "Chatbot:5001" "Educacion:5002" "Simulacion:5003" "Radiografias:5004")
+    local services=("Gateway:3001" "Chatbot:5001" "Educacion:5002" "Simulacion:5003" "Radiografias:5004" "NV-Reason-CXR:5005")
     
     for service in "${services[@]}"; do
         local name=$(echo $service | cut -d: -f1)
@@ -150,33 +109,32 @@ show_status() {
     done
     
     echo ""
-    echo "🌐 URLs de acceso:"
-    echo "   Gateway:     http://localhost:3000"
-    echo "   Chatbot:    http://localhost:5001"
-    echo "   Educación:  http://localhost:5002"
-    echo "   Simulación: http://localhost:5003"
-    echo "   Radiografías: http://localhost:5004"
-    echo ""
 }
 
 # Función para limpiar procesos
 cleanup() {
     print_status "Limpiando procesos..."
     
-    # Matar procesos por PID si existen
-    for service in gateway chatbot educacion simulacion radiografias; do
+    # Matar procesos por PID si existen (incluyendo procesos hijos)
+    for service in gateway chatbot educacion simulacion radiografias nv-reason-cxr; do
         if [ -f "logs/${service}.pid" ]; then
             local pid=$(cat "logs/${service}.pid")
             if kill -0 $pid 2>/dev/null; then
-                kill $pid 2>/dev/null || true
+                # Matar el proceso y todos sus hijos
+                kill -TERM $pid 2>/dev/null || true
+                sleep 2
+                # Si todavía existe, forzar terminación
+                if kill -0 $pid 2>/dev/null; then
+                    kill -9 $pid 2>/dev/null || true
+                fi
                 print_success "Proceso $service (PID $pid) terminado"
             fi
             rm -f "logs/${service}.pid"
         fi
     done
     
-    # Matar procesos por puerto como respaldo
-    for port in 3000 5001 5002 5003 5004; do
+    # Matar procesos por puerto como respaldo (incluir 3001 para gateway)
+    for port in 3001 3000 5001 5002 5003 5004 5005; do
         kill_port $port
     done
     
@@ -188,15 +146,22 @@ main() {
     echo "🏥 SUITE IMSS - INICIO UNIFICADO"
     echo "================================="
     
-    # Crear directorio de logs
+    # Crear directorio de logs (desde el directorio raíz del proyecto)
+    cd "$(dirname "$0")"
     mkdir -p logs
     
     # Verificar dependencias
     print_status "Verificando dependencias..."
     
-    if ! command -v python3 &> /dev/null; then
-        print_error "Python3 no está instalado"
+    if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
+        print_error "Python no está instalado"
         exit 1
+    fi
+    
+    # Usar python3 si está disponible, sino python
+    PYTHON_CMD="python3"
+    if ! command -v python3 &> /dev/null; then
+        PYTHON_CMD="python"
     fi
     
     if ! command -v node &> /dev/null; then
@@ -214,47 +179,110 @@ main() {
     # Limpiar procesos anteriores
     cleanup
     
-    # Configurar trap para cleanup al salir
-    trap cleanup EXIT INT TERM
+    # Obtener IP local (importante para variables de entorno del gateway)
+    LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}' 2>/dev/null || echo "192.168.1.26")
+    print_status "📍 IP local detectada: $LOCAL_IP"
     
-    # Iniciar servicios Flask
+    # Iniciar servicios backend
     print_status "Iniciando servicios backend..."
     
-    start_flask_service "chatbot" 5001 "servicios/chatbot" "app.py"
-    start_flask_service "educacion" 5002 "Educacion_radiografia" "app.py"
-    start_flask_service "simulacion" 5003 "Simulacion" "app.py"
-    start_flask_service "radiografias" 5004 "radiografias_torax/backend" "app.py"
+    # Chatbot - usa main.py (FastAPI) no app.py (Flask legacy)
+    run_bg "chatbot" "cd chatbot && $PYTHON_CMD main.py"
     
-    # Esperar un poco para que los servicios Flask se inicien
-    sleep 5
+    # Educación - usa app.py
+    run_bg "educacion" "cd Educacion_radiografia && $PYTHON_CMD app.py"
     
-    # Iniciar Gateway Next.js
+    # Simulación - usa app.py
+    run_bg "simulacion" "cd Simulacion && $PYTHON_CMD app.py"
+    
+    # Radiografías - usa app.py
+    run_bg "radiografias" "cd radiografias_torax/backend && $PYTHON_CMD app.py"
+    
+    # NV-Reason-CXR - Gradio service (usar venv si existe, sin token requerido)
+    # La ruta del venv debe ser relativa desde IMSS/ (no desde nv-reason-cxr/)
+    PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
+    VENV_PATH="$PROJECT_ROOT/../venv"
+    if [ -d "$VENV_PATH" ]; then
+        # Usar ruta absoluta del venv y cambiar al directorio antes de ejecutar
+        NV_REASON_DIR="$PROJECT_ROOT/nv-reason-cxr"
+        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && source $VENV_PATH/bin/activate && PORT=5005 MODEL=${MODEL:-nvidia/NV-Reason-CXR-3B} python app.py"
+    else
+        NV_REASON_DIR="$PROJECT_ROOT/nv-reason-cxr"
+        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && PORT=5005 MODEL=${MODEL:-nvidia/NV-Reason-CXR-3B} $PYTHON_CMD app.py"
+    fi
+    
+    # Esperar un poco para que los servicios se inicien
+    print_status "Esperando que los servicios backend se inicien..."
+    sleep 8
+    
+    # Iniciar Gateway Next.js con variables de entorno necesarias
     print_status "Iniciando Gateway Next.js..."
-    start_nextjs_service 3000 "UI_IMSS"
+    run_bg "gateway" "cd UI_IMSS && HOSTNAME=0.0.0.0 SERVICIO_CHATBOT_URL=http://$LOCAL_IP:5001 SERVICIO_EDUCACION_URL=http://$LOCAL_IP:5002 SERVICIO_SIMULACION_URL=http://$LOCAL_IP:5003 SERVICIO_RADIOGRAFIAS_URL=http://$LOCAL_IP:5004 npm run dev"
     
     # Esperar que todos los servicios estén listos
     print_status "Esperando que todos los servicios estén listos..."
+    sleep 5
     
-    wait_for_service "http://localhost:5001/api/health" "Chatbot" &
-    wait_for_service "http://localhost:5002/api/health" "Educación" &
-    wait_for_service "http://localhost:5003/api/health" "Simulación" &
-    wait_for_service "http://localhost:5004/api/health" "Radiografías" &
-    wait_for_service "http://localhost:3000/api/health" "Gateway" &
+    # Verificar servicios (en background para no bloquear)
+    wait_for_service "http://localhost:5001/api/health" "Chatbot" || true
+    wait_for_service "http://localhost:5002/api/health" "Educación" || true
+    wait_for_service "http://localhost:5003/api/health" "Simulación" || true
+    wait_for_service "http://localhost:5004/api/health" "Radiografías" || true
+    wait_for_service "http://localhost:5005" "NV-Reason-CXR" || true
     
-    wait  # Esperar que todos los servicios estén listos
+    # Detectar puerto real del gateway (Next.js puede usar otro puerto si 3000 está ocupado)
+    GATEWAY_PORT=""
+    for port in 3001 3000 3002 3003; do
+        if ss -tlnp 2>/dev/null | grep -q ":$port.*next-server" || check_port $port; then
+            GATEWAY_PORT=$port
+            break
+        fi
+    done
+    
+    if [ -z "$GATEWAY_PORT" ]; then
+        GATEWAY_PORT="3001"
+    fi
+    
+    # Verificar gateway en el puerto detectado
+    wait_for_service "http://localhost:$GATEWAY_PORT" "Gateway" || true
     
     # Mostrar estado final
     show_status
     
-    print_success "🎉 ¡Todos los servicios están ejecutándose!"
-    print_status "Presiona Ctrl+C para detener todos los servicios"
+    echo ""
+    echo "🌐 URLs de acceso LOCAL:"
+    echo "   Gateway:        http://localhost:$GATEWAY_PORT"
+    echo "   Chatbot:       http://localhost:5001"
+    echo "   Educación:     http://localhost:5002"
+    echo "   Simulación:    http://localhost:5003"
+    echo "   Radiografías:  http://localhost:5004"
+    echo "   NV-Reason-CXR: http://localhost:5005"
+    echo ""
+    echo "🌐 URLs de acceso RED LOCAL:"
+    echo "   Gateway:        http://$LOCAL_IP:$GATEWAY_PORT"
+    echo "   Chatbot:       http://$LOCAL_IP:5001"
+    echo "   Educación:     http://$LOCAL_IP:5002"
+    echo "   Simulación:    http://$LOCAL_IP:5003"
+    echo "   Radiografías:  http://$LOCAL_IP:5004"
+    echo "   NV-Reason-CXR: http://$LOCAL_IP:5005"
+    echo ""
+    echo "📊 Para ver logs: tail -f logs/[servicio].log"
+    echo "🛑 Para detener: ./stop-all.sh"
+    echo ""
     
-    # Mantener el script ejecutándose
+    print_success "🎉 ¡Todos los servicios están iniciándose!"
+    print_status "Presiona Ctrl+C para detener todos los servicios"
+    echo ""
+    
+    # Configurar trap para limpiar servicios al presionar Ctrl+C
+    trap 'echo ""; print_status "Recibida señal de interrupción. Deteniendo todos los servicios..."; cleanup; exit 0' INT TERM
+    
+    # Mantener el script ejecutándose para monitorear
     while true; do
-        sleep 10
+        sleep 60
         # Verificar que todos los servicios sigan activos
         local all_active=true
-        for port in 3000 5001 5002 5003 5004; do
+        for port in 3001 5001 5002 5003 5004 5005; do
             if ! check_port $port; then
                 all_active=false
                 break
@@ -262,8 +290,8 @@ main() {
         done
         
         if [ "$all_active" = false ]; then
-            print_error "Algunos servicios se han detenido inesperadamente"
-            break
+            print_warning "Algunos servicios pueden haberse detenido. Verifica los logs."
+            show_status
         fi
     done
 }
@@ -271,12 +299,15 @@ main() {
 # Verificar argumentos
 case "${1:-}" in
     "status")
+        cd "$(dirname "$0")"
         show_status
         ;;
     "stop")
+        cd "$(dirname "$0")"
         cleanup
         ;;
     "restart")
+        cd "$(dirname "$0")"
         cleanup
         sleep 2
         main

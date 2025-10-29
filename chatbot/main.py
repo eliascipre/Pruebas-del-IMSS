@@ -12,6 +12,7 @@ import uuid
 import json
 import logging
 import asyncio
+import os
 
 # Importar módulos
 from memory_manager import get_memory_manager
@@ -30,13 +31,31 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS
+# Configurar CORS para permitir conexiones remotas
+# Permitir conexiones desde cualquier origen para desarrollo remoto
+# En producción, configurar con lista específica de orígenes permitidos
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
+if CORS_ORIGINS == "*":
+    # Cuando allow_origins=["*"], allow_credentials debe ser False
+    # Esto permite todos los orígenes sin credenciales (adecuado para desarrollo)
+    allow_origins = ["*"]
+    allow_credentials = False
+    allow_methods = ["*"]
+    allow_headers = ["*"]
+else:
+    # Con orígenes específicos, podemos usar allow_credentials=True
+    # pero debemos especificar métodos y headers explícitamente (no usar "*")
+    allow_origins = [origin.strip() for origin in CORS_ORIGINS.split(",")]
+    allow_credentials = True
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+    allow_headers = ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=allow_origins,
+    allow_credentials=allow_credentials,
+    allow_methods=allow_methods,
+    allow_headers=allow_headers,
 )
 
 # Inicializar componentes

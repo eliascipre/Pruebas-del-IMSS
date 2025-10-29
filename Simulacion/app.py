@@ -21,7 +21,14 @@ from interview_simulator import stream_interview
 from cache import create_cache_zip
 
 app = Flask(__name__, static_folder=os.environ.get("FRONTEND_BUILD", "frontend/build"), static_url_path="/")
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
+# Permitir conexiones desde cualquier origen para desarrollo remoto
+# En producción, configurar con lista específica de orígenes permitidos
+CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
+if CORS_ORIGINS == "*":
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+else:
+    origins_list = [origin.strip() for origin in CORS_ORIGINS.split(",")]
+    CORS(app, resources={r"/api/*": {"origins": origins_list}})
 
 @app.route("/api/health", methods=['GET'])
 def health_check():
