@@ -98,9 +98,14 @@ export default function Home() {
                   </h1>
                   
                   {/* Description */}
-                  <p className="text-base md:text-lg text-gray-700 leading-relaxed">
-                    Una herramienta de agentes inteligentes que encuentra los detalles cruciales invisibles al ojo humano. Precisión diagnóstica de clase mundial con la calidez y el ingenio de la tecnología hecha en México.
-                  </p>
+                  <div className="text-base md:text-lg text-gray-700 leading-relaxed space-y-3">
+                    <p>
+                      LLM Multimodal experto en razonamiento clínico avanzado. Comprensión multimodal, generación de reportes de alta calidad, agente de triaje multi-especialidad. Experto en Dermatología, Histopatología, Oftalmología, entre otras.
+                    </p>
+                    <p>
+                      <strong>Puedes hacer lo siguiente:</strong> Preguntas y respuestas sobre textos médicos, preguntas y respuestas sobre visuales médicas, generación de informes de radiografías, entre otras cosas.
+                    </p>
+                  </div>
                 </div>
 
                 {/* CTA Button */}
@@ -130,9 +135,14 @@ export default function Home() {
                 <br />
                 <span className="text-[#068959]">El Camino hacia la Máxima Certeza Diagnóstica.</span>
               </h1>
-              <p className="text-lg md:text-xl text-gray-700 leading-relaxed mx-auto">
-                Una herramienta de agentes inteligentes que encuentra los detalles cruciales invisibles al ojo humano. Precisión diagnóstica de clase mundial con la calidez y el ingenio de la tecnología hecha en México.
-              </p>
+              <div className="text-lg md:text-xl text-gray-700 leading-relaxed mx-auto space-y-4 max-w-4xl">
+                <p>
+                  LLM Multimodal experto en razonamiento clínico avanzado. Comprensión multimodal, generación de reportes de alta calidad, agente de triaje multi-especialidad. Experto en Dermatología, Histopatología, Oftalmología, entre otras.
+                </p>
+                <p>
+                  <strong>Puedes hacer lo siguiente:</strong> Preguntas y respuestas sobre textos médicos, preguntas y respuestas sobre visuales médicas, generación de informes de radiografías, entre otras cosas.
+                </p>
+              </div>
               <Link href="/chat">
                 <Button className="bg-[#068959] hover:bg-[#057a4a] text-white font-semibold px-8 py-6 rounded-xl text-lg">
                   Inicia una conversación
@@ -341,17 +351,17 @@ export default function Home() {
                 <h4 className="font-bold text-gray-900 mb-4">Características</h4>
                 <ul className="space-y-2 text-gray-600">
                   <li>
-                    <Link href="#" className="hover:text-[#068959] transition-colors">
+                    <Link href="/caracteristicas-principales" className="hover:text-[#068959] transition-colors">
                       Características principales
                     </Link>
                   </li>
                   <li>
-                    <Link href="#" className="hover:text-[#068959] transition-colors">
+                    <Link href="/experiencia-profesional" className="hover:text-[#068959] transition-colors">
                       Experiencia profesional
                     </Link>
                   </li>
                   <li>
-                    <Link href="#" className="hover:text-[#068959] transition-colors">
+                    <Link href="/integraciones" className="hover:text-[#068959] transition-colors">
                       Integraciones
                     </Link>
                   </li>
@@ -386,17 +396,17 @@ export default function Home() {
                 <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
                 <ul className="space-y-2 text-gray-600">
                   <li>
-                    <Link href="#" className="hover:text-[#068959] transition-colors">
+                    <Link href="/contacto" className="hover:text-[#068959] transition-colors">
                       Contacto
                     </Link>
                   </li>
                   <li>
-                    <Link href="#" className="hover:text-[#068959] transition-colors">
+                    <Link href="/soporte-tecnico" className="hover:text-[#068959] transition-colors">
                       Soporte técnico
                     </Link>
                   </li>
                   <li>
-                    <Link href="#" className="hover:text-[#068959] transition-colors">
+                    <Link href="/legal" className="hover:text-[#068959] transition-colors">
                       Legal
                     </Link>
                   </li>
