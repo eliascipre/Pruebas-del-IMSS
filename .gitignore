@@ -135,10 +135,41 @@ chroma_db_store/
 persistent_cache/
 processed_figures_kb/
 default_cache/*.zip
+cache_archive.zip
+
+# Bases de datos - EXCLUIR TODAS
 *.db
 *.db-shm
 *.db-wal
-cache_archive.zip
+*.sqlite
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+
+# Archivos binarios de Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+
+# Archivos binarios de ML/Datos
+*.bin
+*.safetensors
+*.h5
+*.pkl
+*.pickle
+*.joblib
+
+# Archivos de caché específicos
+*.cache
+*.tmp
+*.temp
+.cache/
+.pytest_cache/
+.mypy_cache/
 
 # Logs
 *.log
@@ -163,12 +194,8 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Modelos de ML grandes (si los hay)
-*.bin
-*.safetensors
-*.h5
-*.pkl
-*.pickle
+# Modelos de ML grandes - ya incluidos arriba
+# *.bin, *.safetensors, *.h5, *.pkl, *.pickle ya están excluidos
 
 # Datos temporales de procesamiento
 temp/
@@ -180,10 +207,12 @@ tmp/
 # secrets.json
 
 # NOTA: Los siguientes archivos SÍ deben incluirse en el repositorio:
-# - Archivos CSV con datos médicos (reports_manifest.csv, etc.)
-# - Archivos PDF con guías médicas
-# - Archivos JSON con datos de pacientes y síntomas
-# - Imágenes médicas (JPG, PNG) de casos de estudio
-# - Archivos de configuración de ejemplo (env.list, requirements.txt, package.json)
-# - Código fuente (.py, .js, .jsx, .html, .css)
-# - Documentación (.md, README)
+# ✅ Archivos CSV con datos médicos (reports_manifest.csv, etc.)
+# ✅ Archivos PDF con guías médicas
+# ✅ Archivos JSON con datos de pacientes y síntomas
+# ✅ Imágenes médicas (JPG, PNG) de casos de estudio - IMPORTANTE: Las PNG SÍ se suben
+# ✅ Archivos de configuración de ejemplo (env.list, requirements.txt, package.json)
+# ✅ Código fuente (.py, .js, .jsx, .html, .css)
+# ✅ Documentación (.md, README)
+#
+# ❌ EXCLUIDOS: Bases de datos (*.db, *.sqlite3), archivos binarios (*.bin, *.pkl), caché
