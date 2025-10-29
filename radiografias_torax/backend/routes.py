@@ -33,6 +33,43 @@ IMAGE_DIR = Path(__file__).parent / 'data/images'
 main_bp = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 
+@main_bp.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint."""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'servicio-radiografias',
+        'port': 5004
+    })
+
+@main_bp.route('/', methods=['GET'])
+def serve_frontend():
+    """Serve the frontend application."""
+    try:
+        frontend_path = Path(__file__).parent.parent / 'frontend' / 'dist'
+        if frontend_path.exists():
+            return send_from_directory(str(frontend_path), 'index.html')
+        else:
+            return jsonify({
+                'error': 'Frontend not found',
+                'message': 'Please build the frontend first',
+                'path': str(frontend_path)
+            }), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@main_bp.route('/<path:path>')
+def serve_static_files(path):
+    """Serve static files from frontend."""
+    try:
+        frontend_path = Path(__file__).parent.parent / 'frontend' / 'dist'
+        if frontend_path.exists():
+            return send_from_directory(str(frontend_path), path)
+        else:
+            return jsonify({'error': 'Frontend not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @main_bp.after_request
 def log_full_cycle(response):
     """

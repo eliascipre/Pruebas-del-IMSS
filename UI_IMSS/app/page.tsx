@@ -48,8 +48,8 @@ export default function Home() {
             {/* Left Side - Medical Technology Image (50% width) */}
             <div className="hidden lg:block lg:w-1/2 h-screen relative">
               <Image
-                src="/Rectangle 91911.png"
-                alt="Medical AI Technology"
+                src="/Rectangle%2091911.png"
+                alt="Tecnología de IA Médica"
                 fill
                 className="object-contain"
                 priority
@@ -59,8 +59,8 @@ export default function Home() {
             {/* Mobile Image */}
             <div className="lg:hidden w-full h-[300px] relative">
               <Image
-                src="/Rectangle 91911.png"
-                alt="Medical AI Technology"
+                src="/Rectangle%2091911.png"
+                alt="Tecnología de IA Médica"
                 fill
                 className="object-contain"
                 priority
@@ -136,7 +136,7 @@ export default function Home() {
             <div className="w-full h-[500px] md:h-[600px] relative rounded-2xl overflow-hidden shadow-2xl">
               <Image
                 src="/Image.png"
-                alt="Doctor with Medical AI"
+                alt="Doctor con IA Médica"
                 fill
                 className="object-cover"
               />
@@ -147,7 +147,7 @@ export default function Home() {
         {/* Powered By Section */}
         <section className="bg-gray-50 py-8 md:py-12 border-t border-gray-200">
           <div className="max-w-7xl mx-auto px-6">
-            <p className="text-center text-gray-500 text-xs md:text-sm mb-4 md:mb-6 font-medium">Powered by:</p>
+            <p className="text-center text-gray-500 text-xs md:text-sm mb-4 md:mb-6 font-medium">Desarrollado por:</p>
             <div className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8 flex-wrap">
               <div className="bg-white px-6 md:px-10 py-4 md:py-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
                 <Image
@@ -189,12 +189,13 @@ export default function Home() {
                   Agente de Inteligencia Artificial
                 </h2>
                 <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                  Call out a feature, benefit, or value of your site, then link to a page where people can learn more
-                  about it.
+                  Nuestro asistente de inteligencia artificial especializado en medicina utiliza modelos avanzados como MedGemma para brindar respuestas precisas y contextualizadas sobre temas médicos y radiológicos.
                 </p>
-                <Button className="bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl w-full sm:w-auto">
-                  Call to action
-                </Button>
+                <Link href="/chat">
+                  <Button className="bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl w-full sm:w-auto">
+                    Acceder al Chatbot
+                  </Button>
+                </Link>
               </div>
               <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl order-1 md:order-2">
                 <Image
@@ -208,8 +209,35 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Section 2: Entornos de aprendizaje - image left, text right */}
+        {/* Section 2: Radiografías de Tórax - image left, text right */}
         <section className="py-12 md:py-20 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+              <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
+                <Image
+                  src="/chest-x-ray-radiography-with-green-holographic-ove.jpg"
+                  alt="Radiografías de Tórax"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div className="space-y-4 md:space-y-6">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] leading-tight">Radiografías de Tórax</h2>
+                <p className="text-gray-600 text-base md:text-lg leading-relaxed">
+                  Compañero de aprendizaje radiológico que utiliza MedGemma multimodal con sistema RAG para crear experiencias educativas interactivas con radiografías de tórax.
+                </p>
+                <Link href="/api/proxy/radiografias">
+                  <Button className="bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl w-full sm:w-auto">
+                    Analizar Radiografías
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 3: Entornos de aprendizaje - image left, text right */}
+        <section className="py-12 md:py-20 bg-white">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
               <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
@@ -223,18 +251,20 @@ export default function Home() {
               <div className="space-y-4 md:space-y-6">
                 <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] leading-tight">Entornos de aprendizaje</h2>
                 <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                  When there's one great thing, there's usually another. What's your second thing to showcase?
+                  Plataforma educativa interactiva que utiliza casos de estudio reales y análisis multimodal para enseñar interpretación radiológica y términos médicos especializados.
                 </p>
-                <Button className="bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl w-full sm:w-auto">
-                  Another button
-                </Button>
+                <Link href="http://localhost:5002" target="_blank">
+                  <Button className="bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl w-full sm:w-auto">
+                    Explorar Educación
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Section 3: Simulador de conversaciones - text left, image right */}
-        <section className="py-12 md:py-20 bg-white">
+        {/* Section 4: Simulador de conversaciones - text left, image right */}
+        <section className="py-12 md:py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
               <div className="space-y-4 md:space-y-6 order-2 md:order-1">
@@ -242,12 +272,13 @@ export default function Home() {
                   Simulador de conversaciones
                 </h2>
                 <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                  Call out a feature, benefit, or value of your site, then link to a page where people can learn more
-                  about it.
+                  Sistema avanzado de simulación de entrevistas médicas pre-visita que utiliza MedGemma como entrevistador y pacientes virtuales para generar reportes clínicos estructurados.
                 </p>
-                <Button className="bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl w-full sm:w-auto">
-                  Call to action
-                </Button>
+                <Link href="http://localhost:5003" target="_blank">
+                  <Button className="bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl w-full sm:w-auto">
+                    Probar Simulador
+                  </Button>
+                </Link>
               </div>
               <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl order-1 md:order-2">
                 <Image
@@ -256,31 +287,6 @@ export default function Home() {
                   fill
                   className="object-cover"
                 />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Section 4: Radiología - image left, text right */}
-        <section className="py-12 md:py-20 bg-gray-50">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-              <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
-                <Image
-                  src="/chest-x-ray-radiography-with-green-holographic-ove.jpg"
-                  alt="Radiología"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="space-y-4 md:space-y-6">
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] leading-tight">Radiología</h2>
-                <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                  When there's one great thing, there's usually another. What's your second thing to showcase?
-                </p>
-                <Button className="bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl w-full sm:w-auto">
-                  Another button
-                </Button>
               </div>
             </div>
           </div>
@@ -312,27 +318,27 @@ export default function Home() {
                 </div>
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 mb-4">Features</h4>
+                <h4 className="font-bold text-gray-900 mb-4">Características</h4>
                 <ul className="space-y-2 text-gray-600">
                   <li>
                     <Link href="#" className="hover:text-[#068959] transition-colors">
-                      Core features
+                      Características principales
                     </Link>
                   </li>
                   <li>
                     <Link href="#" className="hover:text-[#068959] transition-colors">
-                      Pro experience
+                      Experiencia profesional
                     </Link>
                   </li>
                   <li>
                     <Link href="#" className="hover:text-[#068959] transition-colors">
-                      Integrations
+                      Integraciones
                     </Link>
                   </li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 mb-4">Learn more</h4>
+                <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
                 <ul className="space-y-2 text-gray-600">
                   <li>
                     <Link href="#" className="hover:text-[#068959] transition-colors">
@@ -341,32 +347,32 @@ export default function Home() {
                   </li>
                   <li>
                     <Link href="#" className="hover:text-[#068959] transition-colors">
-                      Case studies
+                      Casos de estudio
                     </Link>
                   </li>
                   <li>
                     <Link href="#" className="hover:text-[#068959] transition-colors">
-                      Customer stories
+                      Historias de clientes
                     </Link>
                   </li>
                   <li>
                     <Link href="#" className="hover:text-[#068959] transition-colors">
-                      Best practices
+                      Mejores prácticas
                     </Link>
                   </li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 mb-4">Support</h4>
+                <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
                 <ul className="space-y-2 text-gray-600">
                   <li>
                     <Link href="#" className="hover:text-[#068959] transition-colors">
-                      Contact
+                      Contacto
                     </Link>
                   </li>
                   <li>
                     <Link href="#" className="hover:text-[#068959] transition-colors">
-                      Support
+                      Soporte técnico
                     </Link>
                   </li>
                   <li>

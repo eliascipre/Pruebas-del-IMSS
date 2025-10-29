@@ -23,6 +23,15 @@ from cache import create_cache_zip
 app = Flask(__name__, static_folder=os.environ.get("FRONTEND_BUILD", "frontend/build"), static_url_path="/")
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
+@app.route("/api/health", methods=['GET'])
+def health_check():
+    """Health check endpoint."""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'servicio-simulacion',
+        'port': 5003
+    })
+
 @app.route("/")
 def serve():
     """Serves the main index.html file."""
@@ -82,4 +91,5 @@ def static_proxy(path):
         return send_from_directory(app.static_folder, "index.html")
         
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=7860, threaded=True)
+    port = int(os.getenv('FLASK_PORT', 5003))
+    app.run(host="0.0.0.0", port=port, threaded=True)

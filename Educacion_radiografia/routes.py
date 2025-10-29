@@ -30,6 +30,15 @@ logger = logging.getLogger(__name__)
 
 main_bp = Blueprint('main', __name__)
 
+@main_bp.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint."""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'servicio-educacion',
+        'port': 5002
+    })
+
 # LLM client is initialized in app.py create_app()
 
 # --- Serve the cache directory as a zip file ---

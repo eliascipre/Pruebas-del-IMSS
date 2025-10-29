@@ -22,7 +22,7 @@ class FallbackLLM:
         self.lm_studio_endpoint = lm_studio_endpoint
         # Configurar ChatOpenAI con api_key dummy para LM Studio
         self.lm_studio_llm = ChatOpenAI(
-            model="medgemma-4b-it-mlx",
+            model="medgemma-4b-it",
             base_url=lm_studio_endpoint,
             api_key="lm-studio",  # api_key dummy para LM Studio
             temperature=0.7,
@@ -292,7 +292,7 @@ Prompt del usuario: {user_message if user_message else 'Analiza esta radiografí
                     "POST",
                     f"{self.llm.lm_studio_endpoint}chat/completions",
                     json={
-                        "model": "medgemma-4b-it-mlx",
+                        "model": "medgemma-4b-it",
                         "messages": messages_data,
                         "temperature": 0.7,
                         "max_tokens": -1,

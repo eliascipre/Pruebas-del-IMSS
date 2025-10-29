@@ -56,4 +56,5 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
 
     # Run the Flask development server
-    app.run(host='0.0.0.0', port=7863, debug=True)
+    port = int(os.getenv('FLASK_PORT', 5002))
+    app.run(host='0.0.0.0', port=port, debug=True)

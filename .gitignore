@@ -1,0 +1,189 @@
+# Archivo .gitignore principal para la carpeta IMSS
+# Este archivo se aplica a toda la carpeta IMSS y sus subcarpetas
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Node.js
+node_modules/
+build/
+dist/
+.next/
+out/
+
+# Caché específico de proyectos
+cache/
+cache_dir/
+chroma_db_store/
+persistent_cache/
+processed_figures_kb/
+default_cache/*.zip
+*.db
+*.db-shm
+*.db-wal
+cache_archive.zip
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Modelos de ML grandes (si los hay)
+*.bin
+*.safetensors
+*.h5
+*.pkl
+*.pickle
+
+# Datos temporales de procesamiento
+temp/
+tmp/
+
+# Archivos de configuración sensibles (pero mantener ejemplos)
+# .env
+# config.json
+# secrets.json
+
+# NOTA: Los siguientes archivos SÍ deben incluirse en el repositorio:
+# - Archivos CSV con datos médicos (reports_manifest.csv, etc.)
+# - Archivos PDF con guías médicas
+# - Archivos JSON con datos de pacientes y síntomas
+# - Imágenes médicas (JPG, PNG) de casos de estudio
+# - Archivos de configuración de ejemplo (env.list, requirements.txt, package.json)
+# - Código fuente (.py, .js, .jsx, .html, .css)
+# - Documentación (.md, README)
