@@ -108,6 +108,29 @@ class MemoryManager:
             """)
             
             conn.commit()
+            
+            # Tabla de métricas de ejecución
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS metrics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT,
+                    input_chars INTEGER,
+                    output_chars INTEGER,
+                    input_tokens INTEGER,
+                    output_tokens INTEGER,
+                    total_tokens INTEGER,
+                    started_at INTEGER,
+                    ended_at INTEGER,
+                    duration_ms INTEGER,
+                    model TEXT,
+                    provider TEXT,
+                    stream INTEGER,
+                    is_image INTEGER,
+                    success INTEGER,
+                    error_message TEXT
+                )
+            """)
+            conn.commit()
             conn.close()
             logger.info("✅ Base de datos inicializada correctamente")
         except Exception as e:
@@ -203,7 +226,18 @@ class MemoryManager:
             """, (session_id, role, content, int(time.time()), json.dumps(metadata or {})))
             
             conn.commit()
-            conn.close()
+            
+            # Actualizar updated_at de la conversación si existe
+            try:
+                cursor.execute(
+                    "UPDATE conversations SET updated_at = ? WHERE id = ?",
+                    (int(time.time()), session_id),
+                )
+                conn.commit()
+            except Exception as _e:
+                logger.warning(f"⚠️ No se pudo actualizar updated_at: {_e}")
+            finally:
+                conn.close()
             
             # Guardar memoria actualizada
             self.save_memory(session_id, "medico")
@@ -238,6 +272,33 @@ class MemoryManager:
         except Exception as e:
             logger.error(f"❌ Error obteniendo historial: {e}")
             return []
+
+    def query_metrics(self, session_id: Optional[str] = None, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        """Consultar métricas registradas en SQLite"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            params: List[Any] = []
+            where = ""
+            if session_id:
+                where = "WHERE session_id = ?"
+                params.append(session_id)
+            params.extend([limit, offset])
+            cursor.execute(f"""
+                SELECT id, session_id, input_chars, output_chars, input_tokens, output_tokens, total_tokens,
+                       started_at, ended_at, duration_ms, model, provider, stream, is_image, success, error_message
+                FROM metrics
+                {where}
+                ORDER BY id DESC
+                LIMIT ? OFFSET ?
+            """, params)
+            rows = cursor.fetchall()
+            cols = [c[0] for c in cursor.description]
+            conn.close()
+            return [dict(zip(cols, r)) for r in rows]
+        except Exception as e:
+            logger.error(f"❌ Error consultando métricas: {e}")
+            return []
     
     def create_conversation(self, user_id: str, title: str = "Nueva conversación") -> str:
         """Crear nueva conversación"""
@@ -262,6 +323,135 @@ class MemoryManager:
         except Exception as e:
             logger.error(f"❌ Error creando conversación: {e}")
             return ""
+
+    def list_conversations(self, user_id: str, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        """Listar conversaciones de un usuario"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, user_id, title, created_at, updated_at, is_temporary
+                FROM conversations
+                WHERE user_id = ?
+                ORDER BY updated_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (user_id, limit, offset),
+            )
+            rows = cursor.fetchall()
+            conn.close()
+            return [
+                {
+                    "id": r[0],
+                    "user_id": r[1],
+                    "title": r[2],
+                    "created_at": r[3],
+                    "updated_at": r[4],
+                    "is_temporary": r[5],
+                }
+                for r in rows
+            ]
+        except Exception as e:
+            logger.error(f"❌ Error listando conversaciones: {e}")
+            return []
+
+    def delete_all_conversations(self, user_id: str) -> int:
+        """Eliminar todas las conversaciones y mensajes de un usuario"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            # Obtener sesiones del usuario
+            cursor.execute("SELECT id FROM conversations WHERE user_id = ?", (user_id,))
+            session_ids = [r[0] for r in cursor.fetchall()]
+            deleted = 0
+            if session_ids:
+                # Borrar mensajes de esas sesiones
+                cursor.execute(
+                    f"DELETE FROM messages WHERE session_id IN ({','.join(['?']*len(session_ids))})",
+                    session_ids,
+                )
+                # Borrar memorias
+                cursor.execute(
+                    f"DELETE FROM conversation_memory WHERE session_id IN ({','.join(['?']*len(session_ids))})",
+                    session_ids,
+                )
+                # Borrar métricas
+                cursor.execute(
+                    f"DELETE FROM metrics WHERE session_id IN ({','.join(['?']*len(session_ids))})",
+                    session_ids,
+                )
+                # Borrar conversaciones
+                cursor.execute(
+                    "DELETE FROM conversations WHERE user_id = ?",
+                    (user_id,),
+                )
+                deleted = cursor.rowcount
+            conn.commit()
+            conn.close()
+            return deleted
+        except Exception as e:
+            logger.error(f"❌ Error eliminando conversaciones: {e}")
+            return 0
+
+    def ensure_conversation(self, user_id: str, session_id: str, title: str = "Nueva conversación"):
+        """Asegurar que la conversación exista y pertenezca al usuario."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id FROM conversations WHERE id = ?",
+                (session_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                now = int(time.time())
+                cursor.execute(
+                    """
+                    INSERT INTO conversations (id, user_id, title, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (session_id, user_id, title, now, now),
+                )
+                conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.error(f"❌ Error asegurando conversación: {e}")
+
+    def conversation_belongs_to_user(self, session_id: str, user_id: str) -> bool:
+        """Validar pertenencia de una sesión a un usuario"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT 1 FROM conversations WHERE id = ? AND user_id = ?",
+                (session_id, user_id),
+            )
+            ok = cursor.fetchone() is not None
+            conn.close()
+            return ok
+        except Exception as e:
+            logger.error(f"❌ Error validando pertenencia: {e}")
+            return False
+
+    def rename_conversation(self, session_id: str, user_id: str, new_title: str) -> bool:
+        """Renombrar una conversación si pertenece al usuario"""
+        try:
+            if not self.conversation_belongs_to_user(session_id, user_id):
+                return False
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            now = int(time.time())
+            cursor.execute(
+                "UPDATE conversations SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+                (new_title, now, session_id, user_id),
+            )
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            logger.error(f"❌ Error renombrando conversación: {e}")
+            return False
     
     def get_conversation_context(self, session_id: str, agent_id: str = "medico") -> str:
         """Obtener contexto de la conversación para incluir en el prompt"""
@@ -290,6 +480,59 @@ class MemoryManager:
         except Exception as e:
             logger.error(f"❌ Error obteniendo contexto de sesión: {e}")
             return ""
+
+    def log_chat_metrics(
+        self,
+        *,
+        session_id: str,
+        input_chars: int,
+        output_chars: int,
+        input_tokens: Optional[int] = None,
+        output_tokens: Optional[int] = None,
+        total_tokens: Optional[int] = None,
+        started_at: Optional[int] = None,
+        ended_at: Optional[int] = None,
+        duration_ms: Optional[int] = None,
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+        stream: bool = False,
+        is_image: bool = False,
+        success: bool = True,
+        error_message: Optional[str] = None,
+    ):
+        """Registrar métricas de una interacción en SQLite"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO metrics (
+                    session_id, input_chars, output_chars, input_tokens, output_tokens, total_tokens,
+                    started_at, ended_at, duration_ms, model, provider, stream, is_image, success, error_message
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_id,
+                    int(input_chars) if input_chars is not None else None,
+                    int(output_chars) if output_chars is not None else None,
+                    int(input_tokens) if input_tokens is not None else None,
+                    int(output_tokens) if output_tokens is not None else None,
+                    int(total_tokens) if total_tokens is not None else None,
+                    int(started_at) if started_at is not None else None,
+                    int(ended_at) if ended_at is not None else None,
+                    int(duration_ms) if duration_ms is not None else None,
+                    model,
+                    provider,
+                    1 if stream else 0,
+                    1 if is_image else 0,
+                    1 if success else 0,
+                    error_message,
+                ),
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.error(f"❌ Error registrando métricas: {e}")
 
 
 # Instancia global del gestor de memoria

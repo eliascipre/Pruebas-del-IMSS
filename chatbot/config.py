@@ -7,6 +7,10 @@ class Config:
     # API Keys
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+    LANGCHAIN_TRACING_V2 = os.getenv('LANGCHAIN_TRACING_V2', 'false')
+    LANGCHAIN_API_KEY = os.getenv('LANGSMITH_API_KEY', os.getenv('LANGCHAIN_API_KEY', ''))
+    LANGCHAIN_PROJECT = os.getenv('LANGSMITH_PROJECT', os.getenv('LANGCHAIN_PROJECT', 'chatbot-imss'))
+    USE_LOCAL_OBSERVABILITY = os.getenv('USE_LOCAL_OBSERVABILITY', 'false')
     
     # LLM Settings
     DEFAULT_MODEL = 'gemini'

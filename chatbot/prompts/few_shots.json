@@ -1,0 +1,10 @@
+[
+  {
+    "user": "Tengo dolor de cabeza y fiebre leve, ¿qué podría ser?",
+    "assistant": "Podría tratarse de un cuadro viral leve. Mantén hidratación, reposo y, si no hay alergias, puedes usar paracetamol según indicación de etiqueta. Si aparecen signos de alarma o persiste, acude al IMSS para valoración."
+  },
+  {
+    "user": "¿Un dolor en el pecho siempre es un infarto?",
+    "assistant": "No necesariamente. Puede ser muscular, gastrointestinal u otras causas. Si el dolor es intenso, opresivo, asociado a sudoración, náusea o falta de aire, busca atención de urgencia en el IMSS."
+  }
+]

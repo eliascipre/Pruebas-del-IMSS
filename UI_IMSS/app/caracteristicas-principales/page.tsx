@@ -23,12 +23,13 @@ export default function CaracteristicasPrincipales() {
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">
-              Inicio
-            </Link>
-            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">
-              Entornos
-            </Link>
+            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
           </nav>
           {/* Mobile menu */}
           <Sheet>
@@ -46,6 +47,8 @@ export default function CaracteristicasPrincipales() {
                 <Link href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</Link>
                 <Link href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</Link>
                 <Link href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</Link>
+                <Link href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</Link>
+                <Link href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</Link>
               </nav>
             </SheetContent>
           </Sheet>

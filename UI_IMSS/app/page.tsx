@@ -32,15 +32,13 @@ export default function Home() {
             />
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <a href="#agentes" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">
-              Agentes IA
-            </a>
-            <a href="#" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">
-              Registro
-            </a>
-            <a href="#" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">
-              Nosotros
-            </a>
+            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
           </nav>
           {/* Mobile menu */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -53,13 +51,13 @@ export default function Home() {
             </SheetTrigger>
             <SheetContent side="right" className="w-72 sm:w-80">
               <nav className="mt-8 grid gap-4 text-base">
-                <a onClick={()=>setMobileOpen(false)} href="#agentes" className="text-gray-800 hover:text-[#068959]">Agentes IA</a>
-                <a onClick={()=>setMobileOpen(false)} href="#" className="text-gray-800 hover:text-[#068959]">Registro</a>
-                <a onClick={()=>setMobileOpen(false)} href="#" className="text-gray-800 hover:text-[#068959]">Nosotros</a>
-                <a onClick={()=>setMobileOpen(false)} href="/caracteristicas-principales" className="text-gray-800 hover:text-[#068959]">Características</a>
+                <a onClick={()=>setMobileOpen(false)} href="/" className="text-gray-800 hover:text-[#068959]">Inicio</a>
+                <a onClick={()=>setMobileOpen(false)} href="/entornos" className="text-gray-800 hover:text-[#068959]">Entornos</a>
                 <a onClick={()=>setMobileOpen(false)} href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</a>
                 <a onClick={()=>setMobileOpen(false)} href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</a>
                 <a onClick={()=>setMobileOpen(false)} href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</a>
+                <a onClick={()=>setMobileOpen(false)} href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</a>
+                <a onClick={()=>setMobileOpen(false)} href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</a>
               </nav>
             </SheetContent>
           </Sheet>
