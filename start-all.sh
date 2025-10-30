@@ -264,9 +264,9 @@ main() {
     fi
 
     if [ -d "$VENV_PATH" ]; then
-        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && source $VENV_PATH/bin/activate && $NV_REASON_ENV_CMD python app.py"
+        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && source $VENV_PATH/bin/activate && $NV_REASON_ENV_CMD bash run_local.sh --skip-venv"
     else
-        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && $NV_REASON_ENV_CMD $PYTHON_CMD app.py"
+        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && $NV_REASON_ENV_CMD bash run_local.sh --skip-venv"
     fi
     
     # Esperar un poco para que los servicios se inicien
