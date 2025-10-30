@@ -280,3 +280,4 @@ Este proyecto está bajo la licencia MIT. Ver `LICENSE` para más detalles.
 ---
 
 *Desarrollado para el IMSS con ❤️ y IA*
+
