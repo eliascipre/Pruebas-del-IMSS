@@ -5,21 +5,116 @@ import torch
 import spaces
 import os
 
-pretrained_model_name_or_path=os.environ.get("MODEL", "nvidia/NV-Reason-CXR-3B")
+DEFAULT_MODEL_ID = "nvidia/NV-Reason-CXR-3B"
+SYSTEM_PROMPT = (
+    "Eres un radiologo asistente especializado en radiografias de torax. "
+    "Analiza la imagen recibida y responde unicamente en espanol utilizando terminologia medica."
+)
+DEFAULT_PROMPT = (
+    "Analiza esta radiografia de torax, describe los hallazgos principales, las anomalias, los dispositivos de soporte "
+    "y ofrece recomendaciones clinicas. Responde en espanol."
+)
 
-auth_token = os.environ.get("HF_TOKEN") or True
-DEFAULT_PROMPT = "Find abnormalities and support devices."
 
-model = AutoModelForImageTextToText.from_pretrained(
-    pretrained_model_name_or_path=pretrained_model_name_or_path,
-    dtype=torch.bfloat16,
-    token=auth_token
-).eval().to("cuda")
+def get_env_flag(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    value = value.strip().lower()
+    if value in {"1", "true", "t", "yes", "y", "si", "s"}:
+        return True
+    if value in {"0", "false", "f", "no", "n"}:
+        return False
+    return default
 
 
-processor = AutoProcessor.from_pretrained(pretrained_model_name_or_path,
-    use_fast=True,
-  )
+def parse_int_env(name: str, default: int) -> int:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def resolve_model_path() -> str:
+    raw_path = os.environ.get("NV_REASON_MODEL_PATH") or os.environ.get("MODEL") or DEFAULT_MODEL_ID
+    return os.path.expanduser(raw_path)
+
+
+def load_model_and_processor():
+    model_path = resolve_model_path()
+    allow_downloads = get_env_flag("NV_REASON_ALLOW_DOWNLOADS", default=False)
+    local_files_only = not allow_downloads
+
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    bf16_checker = getattr(torch.cuda, "is_bf16_supported", None)
+    is_bf16_supported = False
+    if device == "cuda" and callable(bf16_checker):
+        try:
+            is_bf16_supported = bf16_checker()
+        except Exception:
+            is_bf16_supported = False
+
+    if device == "cuda":
+        torch_dtype = torch.bfloat16 if is_bf16_supported else torch.float16
+    elif device == "mps":
+        torch_dtype = torch.float16
+    else:
+        torch_dtype = torch.float32
+
+    print(f"[nv-reason-cxr] Cargando modelo desde: {model_path}")
+    print(f"[nv-reason-cxr] Descargas habilitadas: {'si' if allow_downloads else 'no'}")
+    print(f"[nv-reason-cxr] Dispositivo seleccionado: {device}")
+
+    load_kwargs = {
+        "torch_dtype": torch_dtype,
+        "local_files_only": local_files_only,
+    }
+
+    if device == "cuda":
+        load_kwargs["device_map"] = {"": device}
+
+    try:
+        model = AutoModelForImageTextToText.from_pretrained(model_path, **load_kwargs)
+    except OSError as exc:
+        hint = (
+            "No se encontró el modelo NV-Reason-CXR-3B en la ruta local especificada. "
+            "Define NV_REASON_MODEL_PATH con la carpeta del modelo o establece NV_REASON_ALLOW_DOWNLOADS=1."
+        )
+        raise RuntimeError(hint) from exc
+
+    model = model.eval()
+
+    if device != "cuda":
+        model = model.to(device)
+
+    try:
+        processor = AutoProcessor.from_pretrained(
+            model_path,
+            use_fast=True,
+            local_files_only=local_files_only,
+        )
+    except OSError as exc:
+        hint = (
+            "No se encontró el procesador/tokenizer del modelo NV-Reason-CXR-3B en la ruta local. "
+            "Verifica la descarga del modelo o habilita NV_REASON_ALLOW_DOWNLOADS=1."
+        )
+        raise RuntimeError(hint) from exc
+
+    return model, processor, device
+
+
+model, processor, DEVICE = load_model_and_processor()
+MAX_NEW_TOKENS = parse_int_env("NV_REASON_MAX_NEW_TOKENS", 2048)
+SERVER_PORT = parse_int_env("PORT", parse_int_env("GRADIO_SERVER_PORT", 7860))
+SERVER_HOST = os.environ.get("HOST", os.environ.get("GRADIO_SERVER_NAME", "0.0.0.0"))
 
 
 @spaces.GPU
@@ -27,55 +122,68 @@ def model_inference(
     text, history, image
 ): 
 
-    print(f"text: {text}")
-    print(f"history: {history}")
+    print(f"[nv-reason-cxr] Consulta recibida: {text}")
+    print(f"[nv-reason-cxr] Historial recibido: {history}")
 
-    if len(text) == 0:
-        raise gr.Error("Please input a query.", duration=3, print_exception=False)
+    if not text or not text.strip():
+        raise gr.Error("Por favor ingresa una consulta.", duration=3, print_exception=False)
 
     if image is None:
-        raise gr.Error("Please provide an image.", duration=3, print_exception=False)
+        raise gr.Error("Por favor carga una imagen de radiografia.", duration=3, print_exception=False)
 
-    # print(f"image0: {image} size: {image.size}")
-
-    messages=[]
-    if len(history) > 0:
+    conversation = []
+    if history:
         valid_index = None
-        for i in range(len(history)):
-            h = history[i]
-            if len(h.get("content").strip()) > 0:
-                if valid_index is None and h['role'] == 'assistant':
-                    valid_index = i-1 
-                messages.append({"role": h['role'], "content": [{"type": "text", "text": h['content']}] })
+        for i, h in enumerate(history):
+            content_text = h.get("content", "")
+            if isinstance(content_text, str) and content_text.strip():
+                if valid_index is None and h.get("role") == "assistant":
+                    valid_index = i - 1
+                conversation.append(
+                    {
+                        "role": h.get("role", "user"),
+                        "content": [{"type": "text", "text": content_text}],
+                    }
+                )
 
         if valid_index is None:
-            messages = []
-        if len(messages) > 0 and valid_index > 0:
-            messages = messages[valid_index:] #remove previous messages (without image)
+            conversation = []
+        elif conversation and valid_index > 0:
+            conversation = conversation[valid_index:]
 
-    # current prompt
-    messages.append({"role": "user","content": [{"type": "text", "text": text}]})
-    messages[0]['content'].insert(0, {"type": "image"})
-    print(f"messages: {messages}")
+    conversation.append(
+        {
+            "role": "user",
+            "content": [{"type": "text", "text": text.strip()}],
+        }
+    )
+    conversation[-1]["content"].insert(0, {"type": "image"})
 
+    messages = [
+        {
+            "role": "system",
+            "content": [{"type": "text", "text": SYSTEM_PROMPT}],
+        },
+        *conversation,
+    ]
+
+    print(f"[nv-reason-cxr] Mensajes enviados al modelo: {messages}")
 
     prompt = processor.apply_chat_template(messages, add_generation_prompt=True)
     inputs = processor(text=prompt, images=[image], return_tensors="pt")
-    inputs = inputs.to('cuda')
+    inputs = inputs.to(DEVICE)
 
-
-    # Generate
-    streamer = TextIteratorStreamer(processor, skip_prompt=True, skip_special_tokens=True)
-    generation_args = dict(inputs, streamer=streamer, max_new_tokens=4096)
+    tokenizer = getattr(processor, "tokenizer", processor)
+    streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+    generation_args = dict(inputs, streamer=streamer, max_new_tokens=MAX_NEW_TOKENS)
 
     with torch.inference_mode():
         thread = Thread(target=model.generate, kwargs=generation_args)
         thread.start()
 
-        yield "..."
+        yield "Procesando..."
         buffer = ""
-        
-        
+
         for new_text in streamer:
             buffer += new_text
             yield buffer
@@ -83,77 +191,116 @@ def model_inference(
 
 with gr.Blocks() as demo:
 
-    gr.HTML('<h1 style="text-align:center; margin: 0.2em 0; color: green;">NV-Reason-CXR-3B Demo. Check out the model card details <a href="https://huggingface.co/nvidia/NV-Reason-CXR-3B" target="_blank">here</a>.</h1>')
-    send_btn = gr.Button("Send", variant="primary", render=False)
-    textbox = gr.Textbox(show_label=False, placeholder="Enter your text here and press ENTER", render=False, submit_btn="Send")
+    gr.HTML(
+        "<h1 style=\"text-align:center; margin: 0.2em 0; color: green;\">"
+        "NV-Reason-CXR-3B - Analizador de radiografias de torax"
+        "</h1>"
+    )
+    gr.HTML(
+        "<p style=\"text-align:center; color: gray;\">"
+        "Modelo cargado localmente. Consulta la ficha tecnica en "
+        "<a href=\"https://huggingface.co/nvidia/NV-Reason-CXR-3B\" target=\"_blank\">Hugging Face</a>."
+        "</p>"
+    )
+    send_btn = gr.Button("Enviar", variant="primary", render=False)
+    textbox = gr.Textbox(
+        show_label=False,
+        placeholder="Escribe tu consulta en espanol y presiona ENTER",
+        render=False,
+        submit_btn="Enviar",
+    )
 
     with gr.Row():
         with gr.Column(scale=1):
             image_input = gr.Image(type="pil", visible=True, sources="upload", show_label=False)
-            clear_btn = gr.Button("Clear", variant="secondary")
+            clear_btn = gr.Button("Limpiar", variant="secondary")
 
-            with gr.Accordion("Examples", open=True): 
+            with gr.Accordion("Ejemplos", open=True):
 
-                ex =gr.Examples(
+                ex = gr.Examples(
                     examples=[
-                        ["example_images/35.jpg", "Examine the chest X-ray."],
-                        ["example_images/363.jpg", "Provide a comprehensive image analysis, and list all abnormalities."],
-                        ["example_images/4747.jpg", "Find abnormalities and support devices."],
-                        ["example_images/87.jpg", "Find abnormalities and support devices."],
-                        ["example_images/6218.jpg", "Find abnormalities and support devices."],
-                        ["example_images/6447.jpg", "Find abnormalities and support devices."],
-
-
+                        ["example_images/35.jpg", "Analiza la radiografia y resume los hallazgos en espanol."],
+                        ["example_images/363.jpg", "Describe anomalias, dispositivos y recomendaciones clinicas."],
+                        ["example_images/4747.jpg", "Enumera hallazgos relevantes y sugiere estudios complementarios."],
+                        ["example_images/87.jpg", "Indica dispositivos de soporte y posibles complicaciones."],
+                        ["example_images/6218.jpg", "Genera un informe estructurado en espanol."],
+                        ["example_images/6447.jpg", "Detalla los hallazgos por sistema y concluye con impresion clinica."],
                     ],
                     inputs=[image_input, textbox],
-                    label=None,
+                    label="Casos de ejemplo",
                 )
                 ex.dataset.show_label = False
 
         with gr.Column(scale=2):
-            chat_interface = gr.ChatInterface(fn=model_inference,
+            chat_interface = gr.ChatInterface(
+                fn=model_inference,
                 type="messages",
-                chatbot=gr.Chatbot(type="messages", label="AI", render_markdown=True, sanitize_html=False, allow_tags=True, height='35vw', container=False, show_share_button=False),
+                chatbot=gr.Chatbot(
+                    type="messages",
+                    label="Asistente IA",
+                    render_markdown=True,
+                    sanitize_html=False,
+                    allow_tags=True,
+                    height="35vw",
+                    container=False,
+                    show_share_button=False,
+                ),
                 textbox=textbox,
                 additional_inputs=image_input,
                 multimodal=False,
                 fill_height=False,
                 show_api=False,
-                )
-            gr.HTML('<span style="color:lightgray">Start with a full prompt: Find abnormalities and support devices.<br>\
-                Follow up with additial questions, such as Provide differentials or Write a structured report.<br>')
+            )
+            gr.HTML(
+                "<span style=\"color:lightgray\">"
+                "Sugiere indicaciones claras (ej. \"Analiza la radiografia y responde en espanol\").<br>"
+                "Puedes solicitar informes estructurados, listas de anomalias o recomendaciones clinicas.<br>"
+                "</span>"
+            )
 
-
-
-        # Clear chat history when an example is selected (keep example-populated inputs intact)
         ex.load_input_event.then(
-                lambda: ([], [], [], None),
-                None,
-                [chat_interface.chatbot, chat_interface.chatbot_state, chat_interface.chatbot_value, chat_interface.saved_input],
-                queue=False,
-                show_api=False,
-            )
-               
-        # Clear chat history when a new image is uploaded via the image input
+            lambda: ([], [], [], None),
+            None,
+            [
+                chat_interface.chatbot,
+                chat_interface.chatbot_state,
+                chat_interface.chatbot_value,
+                chat_interface.saved_input,
+            ],
+            queue=False,
+            show_api=False,
+        )
+
         image_input.upload(
-                lambda: ([], [], [], None, DEFAULT_PROMPT),
-                None,
-                [chat_interface.chatbot, chat_interface.chatbot_state, chat_interface.chatbot_value, chat_interface.saved_input, textbox],
-                queue=False,
-                show_api=False,
-            )
+            lambda: ([], [], [], None, DEFAULT_PROMPT),
+            None,
+            [
+                chat_interface.chatbot,
+                chat_interface.chatbot_state,
+                chat_interface.chatbot_value,
+                chat_interface.saved_input,
+                textbox,
+            ],
+            queue=False,
+            show_api=False,
+        )
 
-        # Clear everything on Clear button click
         clear_btn.click(
-                lambda: ([], [], [], None, "", None),
-                None,
-                [chat_interface.chatbot, chat_interface.chatbot_state, chat_interface.chatbot_value, chat_interface.saved_input, textbox, image_input],
-                queue=False,
-                show_api=False,
-            )
-
+            lambda: ([], [], [], None, "", None),
+            None,
+            [
+                chat_interface.chatbot,
+                chat_interface.chatbot_state,
+                chat_interface.chatbot_value,
+                chat_interface.saved_input,
+                textbox,
+                image_input,
+            ],
+            queue=False,
+            show_api=False,
+        )
 
 
 demo.queue(max_size=10)
-demo.launch(debug=False, server_name="0.0.0.0")
+demo.launch(debug=False, server_name=SERVER_HOST, server_port=SERVER_PORT)
         

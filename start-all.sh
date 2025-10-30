@@ -88,6 +88,39 @@ run_bg() {
     return 0
 }
 
+# Función para resolver la ruta local del modelo NV-Reason-CXR
+resolve_nv_reason_model_path() {
+    local explicit_path="${NV_REASON_MODEL_PATH:-}"
+
+    if [ -n "$explicit_path" ]; then
+        explicit_path="${explicit_path%/}"
+        if [ -d "$explicit_path" ] && [ -f "$explicit_path/config.json" ]; then
+            echo "$explicit_path"
+            return 0
+        fi
+        if [ -f "$explicit_path" ]; then
+            local explicit_dir
+            explicit_dir="$(dirname "$explicit_path")"
+            if [ -f "$explicit_dir/config.json" ]; then
+                echo "$explicit_dir"
+                return 0
+            fi
+        fi
+    fi
+
+    local cache_dir="${HOME}/.cache/huggingface/hub/models--nvidia--NV-Reason-CXR-3B"
+    if [ -d "$cache_dir" ]; then
+        local snapshot_dir
+        snapshot_dir=$(ls -dt "$cache_dir"/snapshots/* 2>/dev/null | head -n 1)
+        if [ -n "$snapshot_dir" ] && [ -f "$snapshot_dir/config.json" ]; then
+            echo "$snapshot_dir"
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
 # Función para mostrar el estado de los servicios
 show_status() {
     echo ""
@@ -202,13 +235,38 @@ main() {
     # La ruta del venv debe ser relativa desde IMSS/ (no desde nv-reason-cxr/)
     PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
     VENV_PATH="$PROJECT_ROOT/../venv"
-    if [ -d "$VENV_PATH" ]; then
-        # Usar ruta absoluta del venv y cambiar al directorio antes de ejecutar
-        NV_REASON_DIR="$PROJECT_ROOT/nv-reason-cxr"
-        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && source $VENV_PATH/bin/activate && PORT=5005 MODEL=${MODEL:-nvidia/NV-Reason-CXR-3B} python app.py"
+    NV_REASON_DIR="$PROJECT_ROOT/nv-reason-cxr"
+
+    NV_REASON_MODEL_RESOLVED="$(resolve_nv_reason_model_path || true)"
+    if [ -n "$NV_REASON_MODEL_RESOLVED" ]; then
+        print_status "Modelo NV-Reason-CXR local detectado: $NV_REASON_MODEL_RESOLVED"
+        NV_REASON_ALLOW_DEFAULT=0
     else
-        NV_REASON_DIR="$PROJECT_ROOT/nv-reason-cxr"
-        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && PORT=5005 MODEL=${MODEL:-nvidia/NV-Reason-CXR-3B} $PYTHON_CMD app.py"
+        print_warning "No se detecto copia local del modelo NV-Reason-CXR-3B. Se permitira descarga si es necesaria."
+        NV_REASON_ALLOW_DEFAULT=1
+    fi
+
+    NV_REASON_ALLOW_DOWNLOADS_VALUE="${NV_REASON_ALLOW_DOWNLOADS:-$NV_REASON_ALLOW_DEFAULT}"
+    NV_REASON_ENV_CMD="PORT=5005 NV_REASON_ALLOW_DOWNLOADS=$NV_REASON_ALLOW_DOWNLOADS_VALUE"
+
+    if [ -n "$NV_REASON_MODEL_RESOLVED" ]; then
+        local model_path_escaped
+        model_path_escaped=$(printf '%q' "$NV_REASON_MODEL_RESOLVED")
+        NV_REASON_ENV_CMD="$NV_REASON_ENV_CMD NV_REASON_MODEL_PATH=$model_path_escaped MODEL=$model_path_escaped"
+    else
+        NV_REASON_ENV_CMD="$NV_REASON_ENV_CMD MODEL=nvidia/NV-Reason-CXR-3B"
+    fi
+
+    if [ "$NV_REASON_ALLOW_DOWNLOADS_VALUE" = "1" ]; then
+        print_warning "NV-Reason-CXR puede requerir conexion para descargar el modelo si no esta en cache."
+    else
+        print_status "NV-Reason-CXR operara en modo offline usando archivos locales."
+    fi
+
+    if [ -d "$VENV_PATH" ]; then
+        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && source $VENV_PATH/bin/activate && $NV_REASON_ENV_CMD python app.py"
+    else
+        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && $NV_REASON_ENV_CMD $PYTHON_CMD app.py"
     fi
     
     # Esperar un poco para que los servicios se inicien
