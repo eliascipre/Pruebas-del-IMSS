@@ -383,6 +383,13 @@ h2 {
     color: #333;
 }
 
+.info-buttons {
+    display: flex;
+    gap: 16px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+
 .info-button {
     font-family: 'Google Sans Text', sans-serif;
     background-color: #0B57D0;
@@ -402,6 +409,18 @@ h2 {
 .info-button:hover {
     background-color: #0a4db8;
     /* Darker blue on hover */
+}
+
+/* Secondary button style */
+.info-button-secondary {
+    background-color: #f8f9fa;
+    color: #5f6368;
+    border: 1px solid #dadce0;
+}
+
+.info-button-secondary:hover {
+    background-color: #e8eaed;
+    color: #3c4043;
 }
 
 .info-disclaimer-box {
@@ -465,6 +484,10 @@ h2 {
         text-align: center;
     }
 
+    .info-buttons {
+        justify-content: center;
+    }
+    
     .info-button {
         align-self: center;
     }

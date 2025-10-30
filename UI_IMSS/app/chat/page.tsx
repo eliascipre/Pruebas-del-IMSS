@@ -159,9 +159,9 @@ export default function ChatPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validar que sea una imagen
-    if (!file.type.startsWith('image/')) {
-      alert('Por favor selecciona una imagen')
+    // Validar que sea una imagen en formato JPG o PNG
+    if (!file.type.startsWith('image/') || (!file.type.includes('jpeg') && !file.type.includes('png'))) {
+      alert('Por favor selecciona una imagen en formato JPG o PNG')
       return
     }
 
@@ -450,7 +450,7 @@ export default function ChatPage() {
                 <input
                   type="file"
                   id="image-upload"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png"
                   onChange={handleImageSelect}
                   className="hidden"
                   disabled={isLoading}

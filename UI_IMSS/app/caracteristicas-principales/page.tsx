@@ -46,6 +46,12 @@ export default function CaracteristicasPrincipales() {
                 experiencias de aprendizaje médico de alta calidad. Los sistemas están diseñados para comprender 
                 el contexto médico complejo y proporcionar respuestas precisas y relevantes.
               </p>
+              <ul className="list-disc list-inside text-gray-600 space-y-2 ml-4">
+                <li><strong>MedGemma:</strong> Modelo de lenguaje especializado en medicina que comprende terminología médica compleja y proporciona respuestas contextualizadas</li>
+                <li><strong>Procesamiento de lenguaje natural:</strong> Capacidad de entender preguntas médicas en lenguaje natural y generar respuestas detalladas</li>
+                <li><strong>Razonamiento clínico:</strong> Los modelos están entrenados para razonar como un médico experto, considerando múltiples factores en el diagnóstico</li>
+                <li><strong>Multimodal:</strong> Capacidad de analizar simultáneamente texto e imágenes médicas para un análisis integral</li>
+              </ul>
             </section>
 
             <section className="space-y-4">
@@ -55,6 +61,13 @@ export default function CaracteristicasPrincipales() {
                 para generar reportes clínicos estructurados. Permite a los profesionales de la salud practicar 
                 sus habilidades de comunicación y diagnóstico en un ambiente seguro y controlado.
               </p>
+              <ul className="list-disc list-inside text-gray-600 space-y-2 ml-4">
+                <li><strong>Pacientes virtuales:</strong> Generación de casos clínicos realistas con historiales médicos completos</li>
+                <li><strong>Entrevista estructurada:</strong> El sistema guía la entrevista médica siguiendo protocolos clínicos estándar</li>
+                <li><strong>Reportes clínicos:</strong> Generación automática de reportes estructurados basados en la entrevista realizada</li>
+                <li><strong>Retroalimentación:</strong> El sistema proporciona retroalimentación sobre la calidad de la entrevista y sugiere mejoras</li>
+                <li><strong>Práctica segura:</strong> Los profesionales pueden practicar sin riesgo para pacientes reales, mejorando sus habilidades antes de casos reales</li>
+              </ul>
             </section>
 
             <section className="space-y-4">
@@ -64,6 +77,13 @@ export default function CaracteristicasPrincipales() {
                 enseñar interpretación radiológica. Los estudiantes pueden mejorar sus habilidades mediante 
                 preguntas de opción múltiple generadas por IA y análisis detallado de radiografías.
               </p>
+              <ul className="list-disc list-inside text-gray-600 space-y-2 ml-4">
+                <li><strong>Casos de estudio reales:</strong> Biblioteca de casos radiológicos reales con diferentes patologías</li>
+                <li><strong>Análisis interactivo:</strong> Los estudiantes pueden hacer clic en diferentes partes de la radiografía para obtener explicaciones detalladas</li>
+                <li><strong>Preguntas de opción múltiple:</strong> Generación automática de preguntas de evaluación adaptadas al nivel del estudiante</li>
+                <li><strong>Explicaciones contextualizadas:</strong> Cada hallazgo radiológico viene acompañado de explicaciones educativas comprensibles</li>
+                <li><strong>Progreso individual:</strong> Seguimiento del progreso de aprendizaje de cada estudiante</li>
+              </ul>
             </section>
 
             <section className="space-y-4">
@@ -73,6 +93,13 @@ export default function CaracteristicasPrincipales() {
                 clínicas hasta análisis de imágenes médicas, nuestra plataforma ofrece una experiencia de aprendizaje 
                 completa y personalizada.
               </p>
+              <ul className="list-disc list-inside text-gray-600 space-y-2 ml-4">
+                <li><strong>Simulación clínica:</strong> Entorno para practicar entrevistas médicas con pacientes virtuales</li>
+                <li><strong>Análisis de radiografías:</strong> Plataforma interactiva para aprender interpretación radiológica</li>
+                <li><strong>Wiki radiológica:</strong> Base de conocimientos con explicaciones detalladas de términos y casos médicos</li>
+                <li><strong>Chatbot médico:</strong> Asistente de IA disponible 24/7 para responder preguntas médicas y educativas</li>
+                <li><strong>Adaptabilidad:</strong> Los entornos se adaptan al nivel de conocimiento y necesidades específicas de cada usuario</li>
+              </ul>
             </section>
 
             <section className="space-y-4">
@@ -82,6 +109,12 @@ export default function CaracteristicasPrincipales() {
                 texto, imágenes radiológicas y datos estructurados. Esto permite una comprensión más completa 
                 de los casos clínicos.
               </p>
+              <ul className="list-disc list-inside text-gray-600 space-y-2 ml-4">
+                <li><strong>Procesamiento de texto:</strong> Análisis de reportes médicos, historiales clínicos y documentación</li>
+                <li><strong>Análisis de imágenes:</strong> Interpretación de radiografías, tomografías y otros estudios de imagen</li>
+                <li><strong>Integración de datos:</strong> Combinación de información textual e imagen para un diagnóstico más preciso</li>
+                <li><strong>Contexto completo:</strong> El sistema considera toda la información disponible para proporcionar recomendaciones más acertadas</li>
+              </ul>
             </section>
           </div>
 
@@ -98,7 +131,7 @@ export default function CaracteristicasPrincipales() {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-12 md:py-16 mt-20">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md: دخول-cols-4 gap-8 md:gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <div className="space-y-4 sm:col-span-2 md:col-span-1">
               <Image
                 src="/quetzalia.png"
@@ -120,8 +153,8 @@ export default function CaracteristicasPrincipales() {
                   </svg>
                 </Link>
                 <Link href="https://www.facebook.com/cipreholding" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
- délégate
-                    <path d="M24 12.073c0-6.627-现实主义-12-12-12s-12 5.373-12 12c0 5.994 7.355 13.352 13.607 14.377.88.162 1.207.376 1.393.641.256.466 0 .798 0 .921 0 .087-.071.106-.154.112-.135.008-.363.014-.525.014s-.393-.006-.525-.014c-.082-.006-.154-.025-.154-.112 0-.123 0-.455 0-.921.186-.265.533-.479 1.393-.641 6.252-1.025 13.607-3.383 13.607-14.377zm-13.963-1.248v5.484h-2.155v-5.484h-2.16v-2.154h2.16v-1.711c0-1.599.944-2.467 2.514-2.467.731 0 1.363.055 1.546.08v1.794h-1.038c-.811 0-.971.386-.971.976v1.328h1.999l-.239 2.154h-1.76z"/>
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.994 7.355 13.352 13.607 14.377.88.162 1.207.376 1.393.641.256.466 0 .798 0 .921 0 .087-.071.106-.154.112-.135.008-.363.014-.525.014s-.393-.006-.525-.014c-.082-.006-.154-.025-.154-.112 0-.123 0-.455 0-.921.186-.265.533-.479 1.393-.641 6.252-1.025 13.607-3.383 13.607-14.377zm-13.963-1.248v5.484h-2.155v-5.484h-2.16v-2.154h2.16v-1.711c0-1.599.944-2.467 2.514-2.467.731 0 1.363.055 1.546.08v1.794h-1.038c-.811 0-.971.386-.971.976v1.328h1.999l-.239 2.154h-1.76z"/>
                   </svg>
                 </Link>
               </div>
@@ -150,22 +183,22 @@ export default function CaracteristicasPrincipales() {
               <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
               <ul className="space-y-2 text-gray-600">
                 <li>
-                  <Link href="#" className="hover:text-[#068959] transition-colors">
+                  <Link href="/blog" className="hover:text-[#068959] transition-colors">
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-[#068959] transition-colors">
+                  <Link href="/casos-de-estudio" className="hover:text-[#068959] transition-colors">
                     Casos de estudio
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-[#068959] transition-colors">
+                  <Link href="/historias-de-clientes" className="hover:text-[#068959] transition-colors">
                     Historias de clientes
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-[#068959] transition-colors">
+                  <Link href="/mejores-practicas" className="hover:text-[#068959] transition-colors">
                     Mejores prácticas
                   </Link>
                 </li>
@@ -175,7 +208,7 @@ export default function CaracteristicasPrincipales() {
               <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
               <ul className="space-y-2 text-gray-600">
                 <li>
-                  <Link href="/contacto" className="hover:text-[#068959] transition-colorsari">
+                  <Link href="/contacto" className="hover:text-[#068959] transition-colors">
                     Contacto
                   </Link>
                 </li>

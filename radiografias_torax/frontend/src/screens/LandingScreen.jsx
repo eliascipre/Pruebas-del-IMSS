@@ -67,24 +67,17 @@ const LandingScreen = ({onStartJourney}) => {
 						</ul>
 					</p>
 					<div className={styles.disclaimerAndButtonContainer}>
-						<p className={styles.disclaimerText}>
-							<span className={styles.highlightAnchor}>Descargo de responsabilidad:</span> Esta demostración es solo para fines ilustrativos
-							y no representa un producto terminado o aprobado. No es representativa del
-							cumplimiento de regulaciones o estándares de calidad, seguridad o eficacia. Cualquier aplicación del mundo real
-							requeriría desarrollo, entrenamiento y adaptación adicionales. La experiencia destacada en esta demo
-							muestra la capacidad básica de MedGemma para la tarea mostrada y está destinada a ayudar a desarrolladores y usuarios
-							a explorar posibles aplicaciones e inspirar mayor desarrollo.
-						</p>
-						<button className={styles.viewDemoButton} onClick={onStartJourney}>
-							Ver Demo
-						</button>
+						<div className={styles.buttonContainer}>
+							<button className={styles.viewDemoButton} onClick={onStartJourney}>
+								Ver Demo
+							</button>
+							<button className={styles.homeButton} onClick={() => window.location.href=`${window.location.protocol}//${window.location.hostname}:3000`}>
+								Ir al Inicio
+							</button>
+						</div>
 					</div>
 				</div>
 
-				<div className={styles.logoContainer}>
-					<span className={styles.logoText}>Med</span>
-					<IconGemma className={styles.logoSvg}/>
-				</div>
 			</div>
 		</div>
 	);

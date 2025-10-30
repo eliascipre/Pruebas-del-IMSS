@@ -20,7 +20,6 @@ import './WelcomePage.css';
 const WelcomePage = ({ onSwitchPage }) => {
   return (
     <div className="welcome page">
-      <img src="/assets/medgemma.avif" alt="MedGemma Logo" className="medgemma-logo" />
       <div className="info-page-container">
         <div className="graphics">
           <img className="graphics-top" src="/assets/welcome_top_graphics.svg" alt="Welcome top graphics" />
@@ -43,16 +42,10 @@ const WelcomePage = ({ onSwitchPage }) => {
             Finalmente, puedes ver una evaluación del informe pre-visita que proporciona información sobre la calidad de la salida. 
             Para esta evaluación, a MedGemma se le proporciona el diagnóstico de referencia, permitiendo una "autoevaluación" que destaca tanto las fortalezas como lo que podría haber hecho mejor.
           </div>
-          <div className="info-disclaimer-text">
-            <span className="info-disclaimer-title">Descargo de Responsabilidad</span> Esta
-            demostración es solo para fines ilustrativos y no representa un producto terminado o aprobado.
-            No es representativa del cumplimiento de regulaciones o estándares de
-            calidad, seguridad o eficacia. Cualquier aplicación del mundo real requeriría desarrollo adicional,
-            entrenamiento y adaptación. La experiencia destacada en esta demo muestra la capacidad
-            básica de MedGemma para la tarea mostrada y está destinada a ayudar a desarrolladores y usuarios a explorar posibles
-            aplicaciones e inspirar un mayor desarrollo.
+          <div className="info-buttons">
+            <button className="info-button" onClick={onSwitchPage}>Seleccionar Paciente</button>
+            <button className="info-button info-button-secondary" onClick={() => window.location.href=`${window.location.protocol}//${window.location.hostname}:3000`}>Ir al Inicio</button>
           </div>
-          <button className="info-button" onClick={onSwitchPage}>Seleccionar Paciente</button>
         </div>
       </div>
     </div>

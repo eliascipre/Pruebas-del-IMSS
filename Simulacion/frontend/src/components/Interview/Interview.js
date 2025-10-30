@@ -109,11 +109,8 @@ const Interview = ({ selectedPatient, selectedCondition, onBack }) => {
       currentPlayingAudio.current.pause();
       currentPlayingAudio.current = null;
     }
-    // Prepend base URL if running on localhost:3000
-    const baseURL =
-      window.location.origin === "http://localhost:3000"
-        ? "http://localhost:7860"
-        : "";
+    // Use current hostname for API calls
+    const baseURL = `${window.location.protocol}//${window.location.hostname}:5003`;
     const url = `${baseURL}/api/stream_conversation?patient=${encodeURIComponent(
       selectedPatient.name
     )}&condition=${encodeURIComponent(selectedCondition)}`;

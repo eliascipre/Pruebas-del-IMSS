@@ -197,10 +197,14 @@ with gr.Blocks() as demo:
         "</h1>"
     )
     gr.HTML(
-        "<p style=\"text-align:center; color: gray;\">"
-        "Modelo cargado localmente. Consulta la ficha tecnica en "
-        "<a href=\"https://huggingface.co/nvidia/NV-Reason-CXR-3B\" target=\"_blank\">Hugging Face</a>."
-        "</p>"
+        "<div style=\"text-align:center; margin: 1em 0;\">"
+        "<button onclick=\"window.location.href=window.location.protocol + '//' + window.location.hostname + ':3000'\" "
+        "style=\"padding: 10px 24px; background: #f8f9fa; color: #5f6368; border: 1px solid #dadce0; "
+        "border-radius: 100px; font-size: 14px; font-weight: 500; cursor: pointer; "
+        "transition: background-color 0.2s; margin: 0 8px;\">"
+        "Ir al Inicio"
+        "</button>"
+        "</div>"
     )
     send_btn = gr.Button("Enviar", variant="primary", render=False)
     textbox = gr.Textbox(

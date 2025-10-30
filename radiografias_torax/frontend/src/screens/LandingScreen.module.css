@@ -181,8 +181,14 @@
   margin-top: 2rem;
 }
 
-.viewDemoButton {
+.buttonContainer {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-top: 2rem;
+}
+
+.viewDemoButton {
   padding: 10px 24px;
   background: #0B57D0;
   color: white;
@@ -198,4 +204,23 @@
 
 .viewDemoButton:hover {
   background: #0a4ab5;
+}
+
+.homeButton {
+  padding: 10px 24px;
+  background: #f8f9fa;
+  color: #5f6368;
+  border: 1px solid #dadce0;
+  border-radius: 100px;
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-text);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: fit-content;
+}
+
+.homeButton:hover {
+  background: #e8eaed;
+  color: #3c4043;
 }

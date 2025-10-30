@@ -1,231 +1,355 @@
-# Sistema de Educación Radiológica - Construido con MedGemma
+# 📚 Educación Radiológica IMSS
 
-## 🩺 Descripción General
+## 📋 Descripción
 
-Este proyecto es una aplicación web educativa diseñada para mejorar el aprendizaje en radiología mediante la interacción inteligente con imágenes médicas y reportes radiológicos. Utiliza el modelo MedGemma-4B de Google para proporcionar explicaciones detalladas y contextualizadas de términos médicos y hallazgos radiológicos.
+Sistema de aprendizaje interactivo diseñado para la educación radiológica de estudiantes de medicina y profesionales de la salud. Utiliza casos clínicos reales, análisis de imágenes médicas con IA y un sistema de retroalimentación inteligente para crear una experiencia de aprendizaje inmersiva.
+
+## 🏗️ Arquitectura
+
+```mermaid
+graph TB
+    subgraph "Frontend"
+        A[HTML/CSS/JS] --> B[Flask Templates]
+    end
+    
+    subgraph "Backend"
+        B --> C[Flask Server]
+        C --> D[MedGemma 27B]
+        C --> E[ChromaDB]
+        C --> F[PDF Processor]
+    end
+    
+    subgraph "Data Layer"
+        G[Medical Guidelines PDFs]
+        H[Case Studies]
+        I[Medical Images]
+        J[Vector Embeddings]
+    end
+    
+    E --> J
+    F --> G
+    C --> H
+    C --> I
+```
 
 ## 🚀 Características Principales
 
-### Interfaz Interactiva
-- **Selección de Casos**: Interfaz con pestañas para casos de Rayos X (CXR) y Tomografía Computarizada (CT)
-- **Visualización de Imágenes**: Visualización clara de imágenes radiológicas con anotaciones contextuales
-- **Texto Interactivo**: Reportes radiológicos con oraciones clickeables para obtener explicaciones detalladas
-- **Explicaciones Dinámicas**: Panel flotante que proporciona explicaciones en tiempo real
+### **Casos Clínicos Interactivos**
+- Casos reales de radiología
+- Progresión de dificultad adaptativa
+- Múltiples escenarios clínicos
+- Feedback inmediato y detallado
 
-### Funcionalidades del Sistema
-- **Análisis Multimodal**: Combina análisis de texto e imagen para explicaciones precisas
-- **Cache Inteligente**: Sistema de caché para optimizar respuestas y reducir latencia
-- **Interfaz Responsiva**: Diseño adaptativo para diferentes dispositivos
-- **Sistema de Errores**: Manejo robusto de errores con mensajes informativos
+### **Análisis de Imágenes con IA**
+- Análisis automático de radiografías
+- Identificación de hallazgos patológicos
+- Explicaciones detalladas de cada hallazgo
+- Comparación con casos normales
 
-## 🏗️ Arquitectura del Sistema
+### **Sistema de Conocimiento Médico**
+- Base de datos de guías médicas
+- Búsqueda semántica en documentos
+- Referencias bibliográficas actualizadas
+- Enlaces a recursos adicionales
 
-### Backend (Flask)
-```
-app.py                 # Punto de entrada principal de la aplicación
-routes.py              # Rutas y lógica de endpoints
-config.py              # Configuración y carga de datos
-llm_client.py          # Cliente para API externa de MedGemma
-local_llm_client.py    # Cliente para MedGemma local (LM Studio)
-utils.py               # Utilidades para procesamiento de imágenes
-cache_store.py         # Sistema de caché con diskcache
-```
+### **Interfaz de Aprendizaje**
+- Diseño intuitivo y responsivo
+- Navegación por casos de estudio
+- Sistema de progreso del usuario
+- Exportación de resultados
 
-### Frontend
-```
-templates/index.html   # Plantilla principal de la interfaz
-static/css/style.css   # Estilos y diseño responsivo
-static/js/demo.js      # Lógica JavaScript para interactividad
-static/images/         # Imágenes radiológicas de ejemplo
-static/reports/        # Reportes de texto correspondientes
-```
+## 🛠️ Tecnologías Utilizadas
 
-### Datos
-```
-static/reports_manifest.csv  # Configuración de casos disponibles
-```
+- **Backend**: Flask + Python 3.8+
+- **IA**: Google MedGemma 27B
+- **Base de Datos**: ChromaDB (vector store)
+- **Frontend**: HTML5 + CSS3 + JavaScript
+- **Procesamiento**: PyPDF2 + LangChain
+- **API**: RESTful endpoints
 
-## 🔧 Configuración y Instalación
+## 📦 Instalación
 
-### Requisitos del Sistema
-- Python 3.10+
-- Docker (opcional)
-- LM Studio o API de MedGemma
-
-### Dependencias
-```
-flask          # Framework web
-gunicorn       # Servidor WSGI
-Pillow         # Procesamiento de imágenes
-diskcache      # Sistema de caché
-requests       # Cliente HTTP
-```
-
-### Instalación Local
-
-1. **Clonar el repositorio**:
+### **Prerrequisitos:**
 ```bash
-git clone <repository-url>
+Python 3.8+
+pip install -r requirements.txt
+ChromaDB
+```
+
+### **Instalación:**
+```bash
 cd Educacion_radiografia
-```
-
-2. **Instalar dependencias**:
-```bash
 pip install -r requirements.txt
 ```
 
-3. **Configurar MedGemma local**:
-   - Instalar LM Studio
-   - Cargar el modelo MedGemma-4B
-   - Iniciar el servidor en `localhost:1234`
+### **Configuración de Base de Datos:**
+```bash
+# Inicializar ChromaDB
+python init_database.py
 
-4. **Ejecutar la aplicación**:
+# Cargar guías médicas
+python load_guidelines.py
+```
+
+## 🚀 Ejecución
+
+### **Desarrollo:**
 ```bash
 python app.py
 ```
 
-### Instalación con Docker
+### **Producción:**
+```bash
+gunicorn -w 4 -b 0.0.0.0:5002 app:app
+```
 
-1. **Construir la imagen**:
+### **Con Docker:**
 ```bash
 docker build -t educacion-radiologia .
+docker run -p 5002:5002 educacion-radiologia
 ```
 
-2. **Ejecutar el contenedor**:
-```bash
-docker run -p 7860:7860 educacion-radiologia
+## 📡 API Endpoints
+
+### **GET /api/health**
+Verificar estado del servicio.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-01T00:00:00Z",
+  "database": "connected",
+  "models": "loaded"
+}
 ```
 
-## 📊 Casos de Estudio Incluidos
+### **POST /api/analyze_image**
+Analizar imagen radiológica.
 
-El sistema incluye 6 casos de estudio preconfigurados:
+**Request:**
+```json
+{
+  "image": "base64_encoded_image",
+  "case_type": "chest_xray",
+  "difficulty": "intermediate"
+}
+```
 
-| Tipo | Nombre del Caso | Descripción |
-|------|----------------|-------------|
-| CT | Tumor | Caso de tumor en tomografía computarizada |
-| CXR | Effusion | Derrame pleural en radiografía de tórax |
-| CXR | Infection | Infección pulmonar |
-| CXR | Lymphadenopathy | Linfadenopatía |
-| CXR | Nodule A | Nódulo pulmonar (caso A) |
-| CXR | Nodule B | Nódulo pulmonar (caso B) |
+**Response:**
+```json
+{
+  "analysis": {
+    "findings": ["consolidation", "pleural_effusion"],
+    "description": "Se observa consolidación en el lóbulo inferior derecho...",
+    "differential_diagnosis": ["neumonía", "atelectasia"],
+    "confidence": 0.87
+  },
+  "educational_content": {
+    "explanation": "La consolidación pulmonar es...",
+    "references": ["guideline_1", "case_study_2"],
+    "next_steps": "Considerar tomografía computarizada..."
+  }
+}
+```
 
-## 🔄 Flujo de Trabajo
+### **GET /api/cases**
+Obtener casos de estudio disponibles.
 
-### 1. Inicialización
-- La aplicación carga la configuración desde `reports_manifest.csv`
-- Se inicializa el cliente LLM (local o remoto)
-- Se configura el sistema de caché
+**Response:**
+```json
+{
+  "cases": [
+    {
+      "id": "case_001",
+      "title": "Neumonía Comunitaria",
+      "difficulty": "beginner",
+      "description": "Caso de neumonía en paciente adulto...",
+      "image_count": 3,
+      "estimated_time": "15 minutes"
+    }
+  ]
+}
+```
 
-### 2. Selección de Caso
-- El usuario selecciona un caso desde las pestañas de navegación
-- Se cargan la imagen y el reporte correspondiente
-- Se actualiza la interfaz con la información del caso
+### **POST /api/search_guidelines**
+Buscar en guías médicas.
 
-### 3. Interacción Educativa
-- El usuario hace clic en cualquier oración del reporte
-- El sistema envía la oración y la imagen al modelo MedGemma
-- Se genera una explicación contextualizada
-- La explicación se muestra en el panel flotante
+**Request:**
+```json
+{
+  "query": "neumonía adquirida en la comunidad",
+  "max_results": 5
+}
+```
 
-### 4. Procesamiento de Respuestas
-- Las respuestas se procesan en streaming para mejor UX
-- Se implementa caché para respuestas frecuentes
-- Manejo de errores y estados de carga
+**Response:**
+```json
+{
+  "results": [
+    {
+      "title": "Guía de Neumonía Comunitaria",
+      "excerpt": "La neumonía adquirida en la comunidad...",
+      "page": 15,
+      "relevance_score": 0.92
+    }
+  ]
+}
+```
 
-## 🎯 Características Técnicas
+## 🎓 Funcionalidades Educativas
 
-### Sistema de Caché
-- Utiliza `diskcache` para almacenar respuestas frecuentes
-- Claves de caché basadas en reporte y oración
-- Persistencia entre sesiones
+### **Sistema de Progreso**
+- Seguimiento de casos completados
+- Puntuación por dificultad
+- Estadísticas de aprendizaje
+- Certificados de progreso
 
-### Procesamiento de Imágenes
-- Conversión automática a Base64 para API
-- Soporte para múltiples formatos de imagen
-- Validación de archivos antes del procesamiento
+### **Casos de Estudio**
+- **Nivel Básico**: Anatomía normal, variantes normales
+- **Nivel Intermedio**: Patologías comunes, diagnósticos diferenciales
+- **Nivel Avanzado**: Casos complejos, patologías raras
 
-### Manejo de Errores
-- Validación de archivos y configuraciones
-- Mensajes de error informativos
-- Recuperación automática de fallos
-
-## 🌐 API Endpoints
-
-### `GET /`
-- Página principal con selección de casos
-
-### `GET /get_report_details/<report_name>`
-- Obtiene detalles de un reporte específico
-- Retorna: texto del reporte, ruta de imagen, tipo de imagen
-
-### `POST /explain`
-- Genera explicación para una oración específica
-- Parámetros: `sentence`, `report_name`
-- Retorna: explicación generada por MedGemma
-
-### `GET /download_cache`
-- Descarga el directorio de caché como archivo ZIP
+### **Recursos de Aprendizaje**
+- Guías clínicas actualizadas
+- Atlas de imágenes médicas
+- Glosario de términos radiológicos
+- Enlaces a literatura médica
 
 ## 🔧 Configuración Avanzada
 
-### Variables de Entorno
+### **Configuración de MedGemma:**
+```python
+MEDGEMMA_CONFIG = {
+    "model_name": "medgemma-27b-it",
+    "temperature": 0.3,  # Más conservador para educación
+    "max_tokens": 1024,
+    "top_p": 0.8
+}
+```
+
+### **Configuración de ChromaDB:**
+```python
+CHROMA_CONFIG = {
+    "collection_name": "medical_guidelines",
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "distance_metric": "cosine"
+}
+```
+
+### **Configuración de Casos:**
+```python
+CASE_CONFIG = {
+    "max_cases_per_session": 10,
+    "difficulty_progression": True,
+    "adaptive_learning": True,
+    "feedback_delay": 2  # segundos
+}
+```
+
+## 📊 Monitoreo y Analytics
+
+### **Métricas de Aprendizaje:**
+- Tiempo promedio por caso
+- Tasa de éxito por dificultad
+- Patrones de error comunes
+- Progreso individual y grupal
+
+### **Logs del Sistema:**
 ```bash
-HF_TOKEN=your_huggingface_token          # Para API remota
-MEDGEMMA_ENDPOINT_URL=your_endpoint_url  # URL del endpoint
-CACHE_DIR=/path/to/cache                 # Directorio de caché
+# Ver logs en tiempo real
+tail -f logs/educacion.log
+
+# Logs de análisis de imágenes
+grep "image_analysis" logs/educacion.log
+
+# Logs de búsquedas
+grep "search_query" logs/educacion.log
 ```
 
-### Personalización de Casos
-Para agregar nuevos casos, edita `static/reports_manifest.csv`:
-```csv
-image_type,case_display_name,image_path,report_path
-CXR,Nuevo Caso,static/images/nuevo.jpg,static/reports/nuevo.txt
-```
+## 🧪 Testing
 
-## 🚀 Despliegue
-
-### Desarrollo Local
+### **Tests Unitarios:**
 ```bash
-python app.py
-# Acceder a http://localhost:7860
+pytest tests/unit/
 ```
 
-### Producción con Gunicorn
+### **Tests de Casos Clínicos:**
 ```bash
-gunicorn --bind 0.0.0.0:7860 --workers 1 --threads 4 app:app
+pytest tests/cases/
 ```
 
-### Docker
+### **Tests de Rendimiento:**
 ```bash
-docker run -p 7860:7860 --env-file env.list educacion-radiologia
+pytest tests/performance/
 ```
 
-## 📝 Notas de Desarrollo
+## 🔒 Seguridad y Privacidad
 
-### Estructura de Archivos
-- **Backend**: Lógica de negocio y API
-- **Frontend**: Interfaz de usuario y interactividad
-- **Static**: Recursos estáticos y datos
-- **Templates**: Plantillas HTML
+### **Protección de Datos:**
+- No almacenamiento de imágenes de pacientes reales
+- Anonimización de datos de usuario
+- Cumplimiento con LFPDPPP
+- Encriptación de datos sensibles
 
-### Mejoras Futuras
-- [ ] Traducción completa de la interfaz al español
-- [ ] Soporte para más tipos de imágenes médicas
-- [ ] Sistema de autenticación de usuarios
-- [ ] Análisis de progreso del aprendizaje
-- [ ] Integración con bases de datos médicas
+### **Validación de Contenido:**
+- Verificación de fuentes médicas
+- Validación por expertos clínicos
+- Actualización regular de contenido
+- Filtrado de información sensible
 
-## ⚠️ Disclaimer
+## 📈 Roadmap
 
-Esta demostración es únicamente para fines educativos e ilustrativos. No representa un producto terminado o aprobado, no está destinado a diagnosticar o sugerir tratamiento de ninguna enfermedad o condición, y no debe ser utilizado para consejo médico. Cualquier aplicación del mundo real requeriría desarrollo, entrenamiento y adaptación adicionales.
+### **Versión 1.1:**
+- [ ] Soporte para más modalidades de imagen
+- [ ] Integración con LMS (Learning Management System)
+- [ ] Sistema de badges y logros
+- [ ] Análisis de competencias
 
-## 📚 Enlaces Útiles
+### **Versión 1.2:**
+- [ ] Realidad virtual para casos 3D
+- [ ] Integración con PACS
+- [ ] Evaluaciones estandarizadas
+- [ ] Certificación profesional
 
-- [MedGemma en HuggingFace](https://huggingface.co/collections/google/medgemma-release-680aade845f90bec6a3f60c4)
-- [MedGemma DevSite](https://developers.google.com/health-ai-developer-foundations/medgemma)
-- [MedGemma ModelGarden](https://console.cloud.google.com/vertex-ai/publishers/google/model-garden/medgemma)
-- [HAI-DEF Models](https://developers.google.com/health-ai-developer-foundations)
+## 🎯 Casos de Uso
+
+### **Para Estudiantes de Medicina:**
+- Aprendizaje de anatomía radiológica
+- Reconocimiento de patrones patológicos
+- Desarrollo de habilidades diagnósticas
+- Preparación para exámenes
+
+### **Para Residentes:**
+- Casos clínicos complejos
+- Actualización de conocimientos
+- Preparación para especialización
+- Evaluación de competencias
+
+### **Para Profesores:**
+- Herramienta de enseñanza
+- Generación de casos personalizados
+- Seguimiento del progreso estudiantil
+- Recursos educativos actualizados
+
+## 🤝 Contribuir
+
+1. Fork del repositorio
+2. Crear rama feature (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit cambios (`git commit -m 'Agregar nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Crear Pull Request
 
 ## 📄 Licencia
 
-Licenciado bajo Apache License 2.0. Ver archivo LICENSE para más detalles.
+Este proyecto está bajo la licencia MIT. Ver `LICENSE` para más detalles.
+
+## 📞 Soporte
+
+- **Issues**: Reportar problemas en el repositorio
+- **Documentación**: Ver documentación completa en `/docs`
+- **Email**: [educacion@imss.ai]
+
+---
+
+*Educando el futuro de la radiología con IA*

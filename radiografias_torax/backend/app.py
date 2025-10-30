@@ -116,8 +116,8 @@ def create_app():
     """Creates and configures the Flask application by calling modular helper functions."""
     application = Flask(__name__, static_folder=config.STATIC_DIR)
     
-    # Enable CORS for all routes
-    CORS(application, origins=['http://localhost:3015', 'http://127.0.0.1:3015'])
+    # Enable CORS for all routes - allow access from any origin in development
+    CORS(application, origins=['*'])
 
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - [%(name)s] - %(message)s')
 

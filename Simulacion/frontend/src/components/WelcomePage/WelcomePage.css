@@ -56,8 +56,26 @@ body:has(.welcome) {
     margin-right: 10px;
 }
 
+.info-buttons {
+    display: flex;
+    gap: 16px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+
 .info-button {
     background-color: #C2E7FF;
+}
+
+.info-button-secondary {
+    background-color: #f8f9fa;
+    color: #5f6368;
+    border: 1px solid #dadce0;
+}
+
+.info-button-secondary:hover {
+    background-color: #e8eaed;
+    color: #3c4043;
 }
 
 .info-disclaimer-text {
@@ -97,6 +115,10 @@ body:has(.welcome) {
         text-align: center;
     }
 
+    .info-buttons {
+        justify-content: center;
+    }
+    
     .info-button {
         align-self: center;
     }

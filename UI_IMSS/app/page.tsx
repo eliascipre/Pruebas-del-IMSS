@@ -371,22 +371,22 @@ export default function Home() {
                 <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
                 <ul className="space-y-2 text-gray-600">
                   <li>
-                    <Link href="#" className="hover:text-[#068959] transition-colors">
+                    <Link href="/blog" className="hover:text-[#068959] transition-colors">
                       Blog
                     </Link>
                   </li>
                   <li>
-                    <Link href="#" className="hover:text-[#068959] transition-colors">
+                    <Link href="/casos-de-estudio" className="hover:text-[#068959] transition-colors">
                       Casos de estudio
                     </Link>
                   </li>
                   <li>
-                    <Link href="#" className="hover:text-[#068959] transition-colors">
+                    <Link href="/historias-de-clientes" className="hover:text-[#068959] transition-colors">
                       Historias de clientes
                     </Link>
                   </li>
                   <li>
-                    <Link href="#" className="hover:text-[#068959] transition-colors">
+                    <Link href="/mejores-practicas" className="hover:text-[#068959] transition-colors">
                       Mejores prácticas
                     </Link>
                   </li>

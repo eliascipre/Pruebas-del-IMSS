@@ -170,12 +170,12 @@ export default function EntornosAprendizaje() {
                 </Link>
                 <Link href="https://www.linkedin.com/company/cipre-holding/posts/?feedView=all" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 0h-14c-2.761 0-5 2.239igs-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 merge5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765cependency.396-2.586 7-2.777 7 2.476v6.759z" />
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
                   </svg>
                 </Link>
                 <Link href="https://www.facebook.com/cipreholding" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.994 7.355 13.352 13.607 14.377.88.162 1.207.376 1.393.641.256.466 0 .798 0 .921 0 .087-.071.106-.154.112-.135.008-.363.014-.525.014s-.393-.006-.525-.014c-.082-.006-.154-.025-.154-.112 0-.123 0-.455 0-.921.186-.265.533-.479 1.393-.641 6.252-1.025 13.607-3.383 13.607-14.377zm-13.963-1.248v5.484h-2.155v-5.484h-2.16v-2.154h2.16v-1.711c0-1.599.944-2.467 2.514-2.467.731  might0 1.363.055 1.546.08v1.794h-1.038c-.811 0-.971.386-.971.976v1.328h1.999l-.239 2.154h-1.76z"/>
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.994 7.355 13.352 13.607 14.377.88.162 1.207.376 1.393.641.256.466 0 .798 0 .921 0 .087-.071.106-.154.112-.135.008-.363.014-.525.014s-.393-.006-.525-.014c-.082-.006-.154-.025-.154-.112 0-.123 0-.455 0-.921.186-.265.533-.479 1.393-.641 6.252-1.025 13.607-3.383 13.607-14.377zm-13.963-1.248v5.484h-2.155v-5.484h-2.16v-2.154h2.16v-1.711c0-1.599.944-2.467 2.514-2.467.731 0 1.363.055 1.546.08v1.794h-1.038c-.811 0-.971.386-.971.976v1.328h1.999l-.239 2.154h-1.76z"/>
                   </svg>
                 </Link>
               </div>
@@ -204,23 +204,23 @@ export default function EntornosAprendizaje() {
               <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
               <ul className="space-y-2 text-gray-600">
                 <li>
-                  <Link href="#" className="hover:text-[#068959] transition-colors">
+                  <Link href="/blog" className="hover:text-[#068959] transition-colors">
                     Blog
                   </Link>
-               这</li>
+                </li>
                 <li>
-                  <Link href="#" className="hover:text-[#068959] transition-colors">
+                  <Link href="/casos-de-estudio" className="hover:text-[#068959] transition-colors">
                     Casos de estudio
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-[#068959] transition-colors">
+                  <Link href="/historias-de-clientes" className="hover:text-[#068959] transition-colors">
                     Historias de clientes
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="hover:text-[#068959] transition-colors">
-                   不只 Mejores prácticas
+                  <Link href="/mejores-practicas" className="hover:text-[#068959] transition-colors">
+                    Mejores prácticas
                   </Link>
                 </li>
               </ul>

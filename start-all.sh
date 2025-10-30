@@ -213,7 +213,15 @@ main() {
     cleanup
     
     # Obtener IP local (importante para variables de entorno del gateway)
-    LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}' 2>/dev/null || echo "192.168.1.26")
+    if command -v ip >/dev/null 2>&1; then
+        # Linux
+        LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}' 2>/dev/null || echo "192.168.1.26")
+    elif command -v route >/dev/null 2>&1; then
+        # macOS
+        LOCAL_IP=$(route get default | grep interface | awk '{print $2}' | xargs ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | head -1)
+    else
+        LOCAL_IP="192.168.1.26"
+    fi
     print_status "📍 IP local detectada: $LOCAL_IP"
     
     # Iniciar servicios backend
