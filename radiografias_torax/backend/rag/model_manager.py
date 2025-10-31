@@ -75,19 +75,27 @@ class ModelManager:
         # 2. Load Stanza for NER
         try:
             logger.info("Downloading NLTK and Stanza models...")
+            # Descargar recursos NLTK necesarios para NLTKTextSplitter
+            try:
+                nltk.download('punkt_tab', quiet=True)
+                logger.info("✅ NLTK punkt_tab downloaded.")
+            except Exception as nltk_err:
+                logger.warning(f"⚠️ Failed to download NLTK punkt_tab: {nltk_err}")
+            # Descargar modelos necesarios sin lemma para evitar el error de charlm_forward_file
+            # Usar tokenize + ner en lugar del package mimic que requiere lemma
             stanza.download(
                 "en",
-                package=self.stanza_ner_package,
-                processors={"ner": self.stanza_ner_processor},
+                processors={"tokenize": "default", "ner": "i2b2"},
                 verbose=False,
             )
             logger.info("✅ Stanza models downloaded.")
 
             logger.info("Loading Stanza NER Pipeline...")
+            # Usar tokenize + ner para evitar el procesador lemma que causa el error
+            # El procesador tokenize es necesario antes de ner pero no requiere lemma
             models['ner_pipeline'] = stanza.Pipeline(
                 lang="en",
-                package=self.stanza_ner_package,
-                processors={"ner": "i2b2"},
+                processors={"tokenize": "default", "ner": "i2b2"},
                 use_gpu=torch.cuda.is_available(),
                 verbose=False,
                 tokenize_no_ssplit=True,
@@ -95,7 +103,19 @@ class ModelManager:
             logger.info("✅ Stanza NER Pipeline loaded successfully.")
         except Exception as e:
             logger.error(f"⚠️ Failed to set up Stanza NER pipeline: {e}", exc_info=True)
-            models['ner_pipeline'] = None
+            # Si falla, intentar sin procesadores adicionales que requieren lemma
+            try:
+                logger.info("Intentando cargar Stanza NER con configuración mínima...")
+                models['ner_pipeline'] = stanza.Pipeline(
+                    lang="en",
+                    processors={"tokenize": "default", "ner": "i2b2"},
+                    use_gpu=False,  # Forzar CPU si hay problemas
+                    verbose=False,
+                )
+                logger.info("✅ Stanza NER Pipeline cargado con configuración mínima.")
+            except Exception as e2:
+                logger.error(f"⚠️ Fallo definitivo al cargar Stanza NER: {e2}", exc_info=True)
+                models['ner_pipeline'] = None
 
         if all(models.values()):
             logger.info("\n✅ All RAG-specific models initialized successfully.")

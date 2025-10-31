@@ -38,14 +38,53 @@ def parse_int_env(name: str, default: int) -> int:
         return default
 
 
+def is_model_complete(model_path: str) -> bool:
+    """Verifica si el modelo está completo en la ruta especificada."""
+    if not os.path.isdir(model_path):
+        return False
+    
+    # Buscar archivos de pesos del modelo
+    model_files = [
+        "model.safetensors",
+        "pytorch_model.bin",
+        "model.safetensors.index.json",
+        "pytorch_model.bin.index.json",
+    ]
+    
+    for file in model_files:
+        if os.path.exists(os.path.join(model_path, file)):
+            return True
+    
+    # Si es un modelo fragmentado, buscar el directorio de fragmentos
+    if os.path.exists(os.path.join(model_path, "model.safetensors.index.json")):
+        return True
+    if os.path.exists(os.path.join(model_path, "pytorch_model.bin.index.json")):
+        return True
+    
+    return False
+
+
 def resolve_model_path() -> str:
     raw_path = os.environ.get("NV_REASON_MODEL_PATH") or os.environ.get("MODEL") or DEFAULT_MODEL_ID
-    return os.path.expanduser(raw_path)
+    expanded_path = os.path.expanduser(raw_path)
+    
+    # Si el path existe pero el modelo está incompleto, usar el repositorio directamente
+    if os.path.exists(expanded_path) and not is_model_complete(expanded_path):
+        print(f"[nv-reason-cxr] Modelo incompleto detectado en {expanded_path}")
+        print(f"[nv-reason-cxr] Usando repositorio de Hugging Face directamente: {DEFAULT_MODEL_ID}")
+        return DEFAULT_MODEL_ID
+    
+    return expanded_path
 
 
 def load_model_and_processor():
     model_path = resolve_model_path()
     allow_downloads = get_env_flag("NV_REASON_ALLOW_DOWNLOADS", default=False)
+    
+    # Si el modelo está usando el repositorio de Hugging Face (no un path local), permitir descargas
+    if model_path == DEFAULT_MODEL_ID:
+        allow_downloads = True
+    
     local_files_only = not allow_downloads
 
     if torch.cuda.is_available():
@@ -74,7 +113,7 @@ def load_model_and_processor():
     print(f"[nv-reason-cxr] Dispositivo seleccionado: {device}")
 
     load_kwargs = {
-        "torch_dtype": torch_dtype,
+        "dtype": torch_dtype,  # Usar dtype en lugar de torch_dtype (deprecated)
         "local_files_only": local_files_only,
     }
 

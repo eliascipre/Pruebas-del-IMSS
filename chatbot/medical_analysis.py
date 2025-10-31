@@ -1,5 +1,5 @@
 """
-Sistema de análisis médico para imágenes - SOLO LM Studio
+Sistema de análisis médico para imágenes - Ollama
 """
 
 import base64
@@ -12,20 +12,21 @@ import json
 logger = logging.getLogger(__name__)
 
 # Configuración
-LM_STUDIO_ENDPOINT = os.getenv("LM_STUDIO_ENDPOINT", "http://localhost:1234/v1/")
-MODEL_NAME = "medgemma-4b-it-mlx"
+OLLAMA_ENDPOINT = os.getenv("OLLAMA_ENDPOINT", os.getenv("LM_STUDIO_ENDPOINT", "http://localhost:11434/v1/"))
+MODEL_NAME = "amsaravi/medgemma-4b-it:q8"
 
 
 class MedicalImageAnalysis:
-    """Sistema de análisis de imágenes médicas con LM Studio"""
+    """Sistema de análisis de imágenes médicas con Ollama"""
     
     def __init__(self):
-        logger.info(f"✅ Configurado para usar LM Studio en: {LM_STUDIO_ENDPOINT}")
+        logger.info(f"✅ Configurado para usar Ollama en: {OLLAMA_ENDPOINT}")
+        logger.info(f"✅ Modelo: {MODEL_NAME}")
     
-    async def analyze_with_lm_studio(self, image_data: str, prompt: str) -> Dict[str, Any]:
-        """Analizar imagen usando LM Studio local con formato multimodal"""
+    async def analyze_with_ollama(self, image_data: str, prompt: str) -> Dict[str, Any]:
+        """Analizar imagen usando Ollama local con formato multimodal"""
         try:
-            logger.info(f"🤖 Analizando con LM Studio: {MODEL_NAME}")
+            logger.info(f"🤖 Analizando con Ollama: {MODEL_NAME}")
             
             # Decodificar imagen para obtener metadata
             image_bytes = base64.b64decode(image_data)
@@ -66,9 +67,9 @@ Responde en español de manera detallada y profesional."""
             
             logger.info(f"📏 Enviando imagen (tamaño: {image_size} bytes) con formato multimodal")
             
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=120.0) as client:
                 response = await client.post(
-                    f"{LM_STUDIO_ENDPOINT}chat/completions",
+                    f"{OLLAMA_ENDPOINT}chat/completions",
                     json={
                         "model": MODEL_NAME,
                         "messages": messages,
@@ -82,34 +83,34 @@ Responde en español de manera detallada y profesional."""
                     result = response.json()
                     analysis = result["choices"][0]["message"]["content"]
                     
-                    logger.info(f"✅ LM Studio response recibida (análisis multimodal)")
+                    logger.info(f"✅ Ollama response recibida (análisis multimodal)")
                     return {
                         "success": True,
                         "analysis": analysis,
                         "model": MODEL_NAME,
-                        "provider": "lm_studio"
+                        "provider": "ollama"
                     }
                 else:
                     error_text = response.text
-                    logger.error(f"❌ Error en LM Studio: {response.status_code} - {error_text}")
+                    logger.error(f"❌ Error en Ollama: {response.status_code} - {error_text}")
                     return {
                         "success": False,
                         "error": f"HTTP {response.status_code}: {error_text}",
-                        "provider": "lm_studio"
+                        "provider": "ollama"
                     }
         except Exception as e:
-            logger.error(f"❌ Error en análisis con LM Studio: {str(e)}")
+            logger.error(f"❌ Error en análisis con Ollama: {str(e)}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 "success": False,
                 "error": str(e),
-                "provider": "lm_studio"
+                "provider": "ollama"
             }
     
     async def analyze_with_fallback(self, image_data: str, image_format: str, prompt: str) -> Dict[str, Any]:
-        """Análisis de imagen con LM Studio"""
-        return await self.analyze_with_lm_studio(image_data, prompt)
+        """Análisis de imagen con Ollama"""
+        return await self.analyze_with_ollama(image_data, prompt)
 
 
 # Instancia global
@@ -117,5 +118,5 @@ medical_analyzer = MedicalImageAnalysis()
 
 
 async def analyze_image_with_fallback(image_data: str, image_format: str, prompt: str) -> Dict[str, Any]:
-    """Función helper para análisis de imagen con LM Studio"""
+    """Función helper para análisis de imagen con Ollama"""
     return await medical_analyzer.analyze_with_fallback(image_data, image_format, prompt)

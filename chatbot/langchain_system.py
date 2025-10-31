@@ -18,36 +18,37 @@ logger = logging.getLogger(__name__)
 
 
 class FallbackLLM:
-    """LLM conectado directamente a LM Studio local"""
+    """LLM conectado directamente a Ollama local"""
     
-    def __init__(self, lm_studio_endpoint: str = "http://localhost:1234/v1/"):
-        self.lm_studio_endpoint = lm_studio_endpoint
-        # Configurar ChatOpenAI con api_key dummy para LM Studio
-        self.lm_studio_llm = ChatOpenAI(
-            model="medgemma-4b-it",
-            base_url=lm_studio_endpoint,
-            api_key="lm-studio",  # api_key dummy para LM Studio
+    def __init__(self, ollama_endpoint: str = "http://localhost:11434/v1/"):
+        self.ollama_endpoint = ollama_endpoint
+        # Configurar ChatOpenAI con api_key dummy para Ollama (compatible con OpenAI API)
+        self.ollama_llm = ChatOpenAI(
+            model="amsaravi/medgemma-4b-it:q8",
+            base_url=ollama_endpoint,
+            api_key="ollama",  # api_key dummy para Ollama (requerido pero no usado)
             temperature=0.7,
             max_tokens=-1,  # -1 para sin límite
             streaming=True,
         )
         
-        logger.info("✅ Configurado para usar LM Studio local")
+        logger.info(f"✅ Configurado para usar Ollama local en: {ollama_endpoint}")
+        logger.info(f"✅ Modelo: amsaravi/medgemma-4b-it:q8")
     
     async def invoke(self, messages: List[BaseMessage], **kwargs) -> Any:
-        """Invocar LLM desde LM Studio"""
+        """Invocar LLM desde Ollama"""
         try:
-            response = await self.lm_studio_llm.ainvoke(messages, **kwargs)
-            logger.info("✅ Respuesta desde LM Studio")
+            response = await self.ollama_llm.ainvoke(messages, **kwargs)
+            logger.info("✅ Respuesta desde Ollama")
             return response
         except Exception as e:
-            logger.error(f"❌ Error en LM Studio: {e}")
+            logger.error(f"❌ Error en Ollama: {e}")
             raise
     
     async def stream(self, messages: List[BaseMessage], **kwargs) -> AsyncGenerator[str, None]:
-        """Streaming desde LM Studio"""
+        """Streaming desde Ollama"""
         try:
-            async for chunk in self.lm_studio_llm.astream(messages, **kwargs):
+            async for chunk in self.ollama_llm.astream(messages, **kwargs):
                 if hasattr(chunk, 'content'):
                     yield chunk.content
                 else:
@@ -133,8 +134,8 @@ class EntityMemory:
 class MedicalChain:
     """Cadena LangChain para análisis médico del IMSS"""
     
-    def __init__(self, lm_studio_endpoint: str = "http://localhost:1234/v1/"):
-        self.llm = FallbackLLM(lm_studio_endpoint)
+    def __init__(self, ollama_endpoint: str = "http://localhost:11434/v1/"):
+        self.llm = FallbackLLM(ollama_endpoint)
         self.memory = EntityMemory()
         self.output_parser = StrOutputParser()
         
@@ -220,7 +221,7 @@ y tratamientos médicos. Responde en español."""
 
             chain = (
                 prompt
-                | self.llm.lm_studio_llm
+                | self.llm.ollama_llm
                 | self.output_parser
             )
 
@@ -289,9 +290,9 @@ y tratamientos médicos. Responde en español."""
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 resp = await client.post(
-                    f"{self.llm.lm_studio_endpoint}chat/completions",
+                    f"{self.llm.ollama_endpoint}chat/completions",
                     json={
-                        "model": "medgemma-4b-it",
+                        "model": "amsaravi/medgemma-4b-it:q8",
                         "messages": messages_data,
                         "temperature": 0.0,
                         "max_tokens": 1,
@@ -369,7 +370,7 @@ y tratamientos médicos. Responde en español."""
             ("system", "{system_prompt}\n\nDevuelve SIEMPRE JSON válido que cumpla este esquema: {schema}"),
             ("human", "{user_message}"),
         ])
-        return prompt | self.llm.lm_studio_llm | json_parser
+        return prompt | self.llm.ollama_llm | json_parser
 
     async def process_chat_json(self, user_message: str) -> Dict[str, Any]:
         """Procesar chat retornando JSON estructurado."""
@@ -420,16 +421,16 @@ Prompt del usuario: {user_message if user_message else 'Analiza esta radiografí
                 {"role": "user", "content": multimodal_content}
             ]
             
-            logger.info(f"🖼️ Enviando imagen multimodal a LM Studio...")
+            logger.info(f"🖼️ Enviando imagen multimodal a Ollama...")
             logger.info(f"📏 Tamaño de imagen base64: {len(image_data)} caracteres")
             
-            # Llamar a LM Studio con streaming
+            # Llamar a Ollama con streaming
             async with httpx.AsyncClient(timeout=120.0) as client:
                 async with client.stream(
                     "POST",
-                    f"{self.llm.lm_studio_endpoint}chat/completions",
+                    f"{self.llm.ollama_endpoint}chat/completions",
                     json={
-                        "model": "medgemma-4b-it",
+                        "model": "amsaravi/medgemma-4b-it:q8",
                         "messages": messages_data,
                         "temperature": 0.7,
                         "max_tokens": -1,
@@ -450,7 +451,7 @@ Prompt del usuario: {user_message if user_message else 'Analiza esta radiografí
                                     pass
                     else:
                         error_text = await response.aread()
-                        logger.error(f"❌ Error en LM Studio: {response.status_code} - {error_text}")
+                        logger.error(f"❌ Error en Ollama: {response.status_code} - {error_text}")
                         yield f"Error: No se pudo procesar la imagen ({response.status_code})"
             
         except Exception as e:
@@ -461,10 +462,10 @@ Prompt del usuario: {user_message if user_message else 'Analiza esta radiografí
 # Instancia global
 _medical_chain = None
 
-def get_medical_chain(lm_studio_endpoint: str = "http://localhost:1234/v1/") -> MedicalChain:
+def get_medical_chain(ollama_endpoint: str = "http://localhost:11434/v1/") -> MedicalChain:
     """Obtener instancia de la cadena médica"""
     global _medical_chain
     if _medical_chain is None:
-        _medical_chain = MedicalChain(lm_studio_endpoint)
+        _medical_chain = MedicalChain(ollama_endpoint)
     return _medical_chain
 

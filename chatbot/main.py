@@ -61,7 +61,16 @@ app.add_middleware(
 
 # Inicializar componentes
 memory_manager = get_memory_manager()
-medical_chain = get_medical_chain()
+
+# Configurar endpoint de Ollama desde variables de entorno
+OLLAMA_ENDPOINT = os.getenv("OLLAMA_ENDPOINT", os.getenv("LM_STUDIO_URL", "http://localhost:11434/v1/"))
+# Asegurar que termine con /v1/ para compatibilidad con OpenAI API
+if not OLLAMA_ENDPOINT.endswith("/v1/"):
+    if OLLAMA_ENDPOINT.endswith("/"):
+        OLLAMA_ENDPOINT = OLLAMA_ENDPOINT + "v1/"
+    else:
+        OLLAMA_ENDPOINT = OLLAMA_ENDPOINT + "/v1/"
+medical_chain = get_medical_chain(OLLAMA_ENDPOINT)
 
 # Configurar LangSmith (tracing) si está habilitado por variables de entorno
 try:
@@ -269,8 +278,8 @@ async def chat_endpoint(req: ChatRequest):
                         started_at=start_ts,
                         ended_at=end_ts,
                         duration_ms=end_ts - start_ts,
-                        model=usage.get('model') if 'usage' in locals() and usage.get('model') else 'medgemma-4b-it',
-                        provider='lm-studio',
+                        model=usage.get('model') if 'usage' in locals() and usage.get('model') else 'amsaravi/medgemma-4b-it:q8',
+                        provider='ollama',
                         stream=False,
                         is_image=False,
                         success=True,
@@ -310,8 +319,8 @@ async def chat_endpoint(req: ChatRequest):
                         started_at=start_ts,
                         ended_at=end_ts,
                         duration_ms=end_ts - start_ts,
-                        model=usage.get('model') if 'usage' in locals() and usage.get('model') else 'medgemma-4b-it',
-                        provider='lm-studio',
+                        model=usage.get('model') if 'usage' in locals() and usage.get('model') else 'amsaravi/medgemma-4b-it:q8',
+                        provider='ollama',
                         stream=False,
                         is_image=False,
                         success=True,
@@ -355,8 +364,8 @@ async def process_text_stream(message: str, session_id: str):
                 started_at=start_ts,
                 ended_at=end_ts,
                 duration_ms=end_ts - start_ts,
-                model='medgemma-4b-it',
-                provider='lm-studio',
+                model='amsaravi/medgemma-4b-it:q8',
+                provider='ollama',
                 stream=True,
                 is_image=False,
                 success=True,
