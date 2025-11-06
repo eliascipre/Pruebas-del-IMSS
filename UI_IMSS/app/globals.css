@@ -116,3 +116,38 @@
     @apply bg-white text-gray-800;
   }
 }
+
+/* Estilos para prevenir desbordamiento de texto en mensajes del chat */
+@layer utilities {
+  .markdown-content {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+  }
+  
+  .markdown-content * {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+  }
+  
+  .markdown-content p,
+  .markdown-content li,
+  .markdown-content td,
+  .markdown-content th {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  
+  /* Forzar salto de línea en palabras muy largas */
+  .break-words {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}

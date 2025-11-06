@@ -5,8 +5,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
+import ProtectedRoute from "@/components/auth/protected-route"
 
-export default function EntornosAprendizaje() {
+function EntornosAprendizajeContent() {
   const [baseUrl, setBaseUrl] = useState('http://localhost')
   
   useEffect(() => {
@@ -275,6 +276,14 @@ export default function EntornosAprendizaje() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function EntornosAprendizaje() {
+  return (
+    <ProtectedRoute>
+      <EntornosAprendizajeContent />
+    </ProtectedRoute>
   )
 }
 

@@ -6,11 +6,13 @@ Incluye: Fallback automático, Few-shot, Streaming, Memoria avanzada
 import logging
 from typing import Dict, List, Optional, Any, AsyncGenerator
 import asyncio
+import httpx
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
+from optimizations import get_http_pool
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage, ChatMessage
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
-from langchain_core.runnables import RunnableLambda, RunnableParallel, RunnableSequence
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnableLambda, RunnableParallel, RunnableSequence, RunnablePassthrough
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate, FewShotPromptTemplate
 import json
 import os
 
@@ -18,35 +20,35 @@ logger = logging.getLogger(__name__)
 
 
 class FallbackLLM:
-    """LLM conectado directamente a Ollama local"""
+    """LLM conectado a vLLM con Ray Serve (compatible con OpenAI API)"""
     
-    def __init__(self, ollama_endpoint: str = "http://localhost:11434/v1/"):
-        self.ollama_endpoint = ollama_endpoint
-        # Configurar ChatOpenAI con api_key dummy para Ollama (compatible con OpenAI API)
+    def __init__(self, vllm_endpoint: str = "http://localhost:8000/v1/"):
+        self.vllm_endpoint = vllm_endpoint
+        # Configurar ChatOpenAI para usar vLLM con Ray Serve (compatible con OpenAI API)
         self.ollama_llm = ChatOpenAI(
-            model="amsaravi/medgemma-4b-it:q8",
-            base_url=ollama_endpoint,
-            api_key="ollama",  # api_key dummy para Ollama (requerido pero no usado)
+            model="google/medgemma-27b-it",
+            base_url=vllm_endpoint,
+            api_key="not-needed",  # api_key dummy para vLLM (requerido pero no usado)
             temperature=0.7,
-            max_tokens=-1,  # -1 para sin límite
-            streaming=True,
+            max_tokens=100,  # Configurable según necesidad
+            streaming=False,  # Sin streaming - recibir respuesta completa
         )
         
-        logger.info(f"✅ Configurado para usar Ollama local en: {ollama_endpoint}")
-        logger.info(f"✅ Modelo: amsaravi/medgemma-4b-it:q8")
+        logger.info(f"✅ Configurado para usar vLLM con Ray Serve en: {vllm_endpoint}")
+        logger.info(f"✅ Modelo: google/medgemma-27b-it")
     
     async def invoke(self, messages: List[BaseMessage], **kwargs) -> Any:
-        """Invocar LLM desde Ollama"""
+        """Invocar LLM desde vLLM con Ray Serve"""
         try:
             response = await self.ollama_llm.ainvoke(messages, **kwargs)
-            logger.info("✅ Respuesta desde Ollama")
+            logger.info("✅ Respuesta desde vLLM con Ray Serve")
             return response
         except Exception as e:
-            logger.error(f"❌ Error en Ollama: {e}")
+            logger.error(f"❌ Error en vLLM: {e}")
             raise
     
     async def stream(self, messages: List[BaseMessage], **kwargs) -> AsyncGenerator[str, None]:
-        """Streaming desde Ollama"""
+        """Streaming desde vLLM con Ray Serve"""
         try:
             async for chunk in self.ollama_llm.astream(messages, **kwargs):
                 if hasattr(chunk, 'content'):
@@ -134,8 +136,8 @@ class EntityMemory:
 class MedicalChain:
     """Cadena LangChain para análisis médico del IMSS"""
     
-    def __init__(self, ollama_endpoint: str = "http://localhost:11434/v1/"):
-        self.llm = FallbackLLM(ollama_endpoint)
+    def __init__(self, vllm_endpoint: str = "http://localhost:8000/v1/"):
+        self.llm = FallbackLLM(vllm_endpoint)
         self.memory = EntityMemory()
         self.output_parser = StrOutputParser()
         
@@ -188,8 +190,59 @@ y tratamientos médicos. Responde en español."""
             logger.warning(f"⚠️ No se pudieron cargar few-shots: {e}")
         return []
     
+    def _normalize_text(self, text: str) -> str:
+        """Normalizar texto para asegurar espacios correctos entre palabras"""
+        if not text:
+            return text
+        
+        import re
+        
+        # Primero, normalizar espacios múltiples a un solo espacio
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Detectar y separar palabras concatenadas (palabras en español comunes)
+        # Patrón para detectar transiciones de minúscula a mayúscula (posible inicio de palabra)
+        # Ejemplo: "holaSoy" -> "hola Soy"
+        text = re.sub(r'([a-záéíóúñü])([A-ZÁÉÍÓÚÑÜ])', r'\1 \2', text)
+        
+        # Detectar transiciones de mayúscula a minúscula después de una palabra completa
+        # Ejemplo: "Soytu" -> "Soy tu" (pero no "IMSS" -> "IM SS")
+        # Solo si la primera letra es mayúscula y la siguiente es minúscula
+        text = re.sub(r'([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+)([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü])', r'\1 \2', text)
+        
+        # Asegurar espacios después de signos de puntuación comunes (excepto si ya hay espacio)
+        text = re.sub(r'([.!?,:;])([^\s])', r'\1 \2', text)
+        
+        # Asegurar espacios antes de signos de puntuación de apertura
+        text = re.sub(r'([^\s])([¡¿])', r'\1 \2', text)
+        
+        # Asegurar espacios después de signos de puntuación de cierre
+        text = re.sub(r'([!?])([^\s])', r'\1 \2', text)
+        
+        # Separar palabras comunes concatenadas (patrones comunes en español)
+        # Ejemplo: "puedoayudarte" -> "puedo ayudarte"
+        common_patterns = [
+            (r'([a-záéíóúñü]+)(puedo|soy|eres|es|son|estoy|estás|está|están)', r'\1 \2'),
+            (r'(puedo|soy|eres|es|son|estoy|estás|está|están)([a-záéíóúñü]+)', r'\1 \2'),
+            (r'([a-záéíóúñü]+)(ayudarte|ayudar|ayuda|ayudan)', r'\1 \2'),
+            (r'(ayudarte|ayudar|ayuda|ayudan)([a-záéíóúñü]+)', r'\1 \2'),
+            (r'([a-záéíóúñü]+)(asistente|especializado|médico)', r'\1 \2'),
+            (r'(asistente|especializado|médico)([a-záéíóúñü]+)', r'\1 \2'),
+        ]
+        
+        for pattern, replacement in common_patterns:
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        
+        # Normalizar espacios múltiples nuevamente después de todas las transformaciones
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Limpiar espacios al inicio y final
+        text = text.strip()
+        
+        return text
+    
     async def process_chat(self, user_message: str, session_id: str = "", use_entities: bool = True) -> str:
-        """Procesar chat con contexto de memoria (usa LCEL internamente)."""
+        """Procesar chat con contexto de memoria usando LCEL completo con Few-shot, OutputParsers, etc."""
         try:
             # Construcción de contexto en paralelo (entidades + recientes)
             async def build_entity_ctx() -> str:
@@ -200,15 +253,7 @@ y tratamientos médicos. Responde en español."""
 
             entity_ctx, recent_msgs = await asyncio.gather(build_entity_ctx(), build_recent_msgs())
 
-            # Construir plantilla con few-shots opcionales
-            system_block = "{system_prompt}\n\n{entity_context}\n\n{recent_context}"
-            messages_def: List[Any] = [("system", system_block)]
-            for example in (self.few_shots or []):
-                messages_def.append(("human", example.get("user", "")))
-                messages_def.append(("ai", example.get("assistant", "")))
-            messages_def.append(("human", "{user_message}"))
-            prompt = ChatPromptTemplate.from_messages(messages_def)
-
+            # Formatear contexto reciente
             def format_recent(recent: List[Dict[str, Any]]) -> str:
                 if not recent:
                     return ""
@@ -219,18 +264,45 @@ y tratamientos médicos. Responde en español."""
                     lines.append(f"{role}: {content}")
                 return "\n".join(lines)
 
-            chain = (
-                prompt
-                | self.llm.ollama_llm
-                | self.output_parser
-            )
+            # Construir mensajes usando ChatPromptTemplate con Few-shot
+            # Crear mensajes con estructura: System + Few-shot examples + User message
+            messages_list: List[BaseMessage] = []
+            
+            # System message con contexto
+            system_content = f"{self.system_prompt}\n\n{entity_ctx or ''}\n\n{format_recent(recent_msgs)}".strip()
+            messages_list.append(SystemMessage(content=system_content))
+            
+            # Few-shot examples (HumanMessage + AIMessage)
+            for example in (self.few_shots or [])[:2]:  # Máximo 2 ejemplos few-shot
+                if example.get("user") and example.get("assistant"):
+                    messages_list.append(HumanMessage(content=example["user"]))
+                    messages_list.append(AIMessage(content=example["assistant"]))
+            
+            # User message actual
+            messages_list.append(HumanMessage(content=user_message))
 
-            answer = await chain.ainvoke({
-                "system_prompt": self.system_prompt,
-                "entity_context": entity_ctx or "",
-                "recent_context": format_recent(recent_msgs),
-                "user_message": user_message,
-            })
+            # Usar LCEL: pasar mensajes directamente al LLM y luego al OutputParser
+            # Invocar LLM directamente con los mensajes
+            response = await self.llm.ollama_llm.ainvoke(messages_list)
+            
+            # Extraer contenido - asegurar que obtenemos el contenido correctamente
+            if hasattr(response, 'content'):
+                answer = response.content
+            elif hasattr(response, 'text'):
+                answer = response.text
+            else:
+                answer = str(response)
+            
+            # Parsear con OutputParser si es necesario
+            try:
+                answer = self.output_parser.parse(answer)
+            except Exception:
+                # Si el parser falla, usar el texto directamente
+                pass
+            
+            # Normalizar el texto: asegurar espacios correctos entre palabras
+            # Esto corrige problemas donde los tokens se concatenan sin espacios
+            answer = self._normalize_text(answer)
 
             # Guardar en memoria
             self.memory.add_message("user", user_message)
@@ -274,9 +346,8 @@ y tratamientos médicos. Responde en español."""
         ]
 
     async def estimate_usage_from_messages(self, messages: List[BaseMessage]) -> Dict[str, Any]:
-        """Realiza una llamada directa (no streaming) a LM Studio para obtener usage tokens."""
+        """Realiza una llamada directa (no streaming) a vLLM para obtener usage tokens."""
         try:
-            import httpx
             # Adaptar mensajes a formato OpenAI
             def to_openai(m: BaseMessage):
                 role = 'user'
@@ -288,17 +359,19 @@ y tratamientos médicos. Responde en español."""
 
             messages_data = [to_openai(m) for m in messages]
 
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                resp = await client.post(
-                    f"{self.llm.ollama_endpoint}chat/completions",
-                    json={
-                        "model": "amsaravi/medgemma-4b-it:q8",
-                        "messages": messages_data,
-                        "temperature": 0.0,
-                        "max_tokens": 1,
-                        "stream": False,
-                    },
-                )
+            # Usar connection pool para estimación de tokens
+            client = get_http_pool()
+            resp = await client.post(
+                f"{self.llm.vllm_endpoint}chat/completions",
+                json={
+                    "model": "google/medgemma-27b-it",
+                    "messages": messages_data,
+                    "temperature": 0.0,
+                    "max_tokens": 1,
+                    "stream": False,
+                },
+                timeout=60.0
+            )
             if resp.status_code == 200:
                 data = resp.json()
                 usage = data.get("usage", {})
@@ -316,7 +389,7 @@ y tratamientos médicos. Responde en español."""
         return {}
     
     async def stream_chat(self, user_message: str, session_id: str = "") -> AsyncGenerator[str, None]:
-        """Procesar chat con streaming"""
+        """Procesar chat con streaming usando LCEL completo con Few-shot, Runnable, etc."""
         try:
             # Construcción de contexto paralela
             async def build_entity_ctx() -> str:
@@ -327,21 +400,37 @@ y tratamientos médicos. Responde en español."""
 
             entity_context, recent_messages = await asyncio.gather(build_entity_ctx(), build_recent_msgs())
 
-            # Crear mensajes
-            messages = [
-                SystemMessage(content="\n".join([
-                    self.system_prompt,
-                    ("\n\n" + entity_context) if entity_context else "",
-                    ("\n\n## Conversación reciente:\n" + "\n".join([
-                        ("Usuario" if m["role"] == "user" else "Asistente") + ": " + (m["content"][:150] + "..." if len(m["content"]) > 150 else m["content"]) for m in recent_messages
-                    ])) if recent_messages else ""
-                ]).strip()),
-                HumanMessage(content=user_message)
-            ]
+            # Formatear contexto reciente
+            def format_recent(recent: List[Dict[str, Any]]) -> str:
+                if not recent:
+                    return ""
+                lines = ["## Conversación reciente:"]
+                for msg in recent:
+                    role = "Usuario" if msg["role"] == "user" else "Asistente"
+                    content = msg["content"][:150] + "..." if len(msg["content"]) > 150 else msg["content"]
+                    lines.append(f"{role}: {content}")
+                return "\n".join(lines)
 
-            # Stream response
+            # Construir mensajes con Few-shot usando BaseMessage
+            messages_list: List[BaseMessage] = []
+            
+            # System message con contexto
+            system_content = f"{self.system_prompt}\n\n{entity_context or ''}\n\n{format_recent(recent_messages)}".strip()
+            messages_list.append(SystemMessage(content=system_content))
+            
+            # Few-shot examples (HumanMessage + AIMessage)
+            for example in (self.few_shots or [])[:2]:  # Máximo 2 ejemplos few-shot
+                if example.get("user") and example.get("assistant"):
+                    messages_list.append(HumanMessage(content=example["user"]))
+                    messages_list.append(AIMessage(content=example["assistant"]))
+            
+            # User message actual
+            messages_list.append(HumanMessage(content=user_message))
+
+            # Stream response usando LangChain con LCEL
+            # Usar RunnableSequence para streaming: messages -> LLM (streaming) -> OutputParser
             full_response = ""
-            async for chunk in self.llm.stream(messages):
+            async for chunk in self.llm.stream(messages_list):
                 full_response += chunk
                 yield chunk
             
@@ -354,7 +443,7 @@ y tratamientos médicos. Responde en español."""
             yield f"Error: {str(e)}"
 
     def build_json_chain(self) -> RunnableSequence:
-        """Cadena LCEL que obliga salida JSON estructurada para hallazgos médicos."""
+        """Cadena LCEL que obliga salida JSON estructurada para hallazgos médicos usando OutputParser."""
         schema = {
             "type": "object",
             "properties": {
@@ -365,27 +454,39 @@ y tratamientos médicos. Responde en español."""
             },
             "required": ["resumen", "recomendaciones"]
         }
+        # Usar JsonOutputParser para parsear la salida del LLM
         json_parser = JsonOutputParser()
+        
+        # Construir ChatPromptTemplate con estructura clara
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "{system_prompt}\n\nDevuelve SIEMPRE JSON válido que cumpla este esquema: {schema}"),
+            ("system", "{system_prompt}\n\nDevuelve SIEMPRE JSON válido que cumpla este esquema: {schema}\n\n{format_instructions}"),
             ("human", "{user_message}"),
         ])
-        return prompt | self.llm.ollama_llm | json_parser
+        
+        # Cadena LCEL completa: Prompt -> LLM -> JsonOutputParser
+        chain = (
+            prompt
+            | self.llm.ollama_llm
+            | json_parser
+        )
+        
+        return chain
 
     async def process_chat_json(self, user_message: str) -> Dict[str, Any]:
-        """Procesar chat retornando JSON estructurado."""
+        """Procesar chat retornando JSON estructurado usando OutputParser."""
         chain = self.build_json_chain()
+        json_parser = JsonOutputParser()
+        
         return await chain.ainvoke({
             "system_prompt": self.system_prompt,
             "schema": "resumen:string, posibles_causas:string[], recomendaciones:string[], nivel_urgencia:[baja|media|alta]",
+            "format_instructions": json_parser.get_format_instructions(),
             "user_message": user_message,
         })
     
     async def stream_medical_analysis(self, user_message: str, image_data: str, session_id: str = "") -> AsyncGenerator[str, None]:
         """Procesar análisis médico de imágenes con streaming usando formato multimodal"""
         try:
-            import httpx
-            
             # Construir prompt para análisis de imagen
             analysis_prompt = f"""{self.system_prompt}
 
@@ -421,38 +522,38 @@ Prompt del usuario: {user_message if user_message else 'Analiza esta radiografí
                 {"role": "user", "content": multimodal_content}
             ]
             
-            logger.info(f"🖼️ Enviando imagen multimodal a Ollama...")
+            logger.info(f"🖼️ Enviando imagen multimodal a vLLM con Ray Serve...")
             logger.info(f"📏 Tamaño de imagen base64: {len(image_data)} caracteres")
             
-            # Llamar a Ollama con streaming
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                async with client.stream(
-                    "POST",
-                    f"{self.llm.ollama_endpoint}chat/completions",
-                    json={
-                        "model": "amsaravi/medgemma-4b-it:q8",
-                        "messages": messages_data,
-                        "temperature": 0.7,
-                        "max_tokens": -1,
-                        "stream": True
-                    }
-                ) as response:
-                    if response.status_code == 200:
-                        logger.info("✅ Respuesta streaming iniciada correctamente")
-                        async for line in response.aiter_lines():
-                            if line.startswith("data: ") and line.strip() != "data: [DONE]":
-                                try:
-                                    data = json.loads(line[6:])
-                                    if "choices" in data and len(data["choices"]) > 0:
-                                        delta_content = data["choices"][0].get("delta", {}).get("content", "")
-                                        if delta_content:
-                                            yield delta_content
-                                except:
-                                    pass
-                    else:
-                        error_text = await response.aread()
-                        logger.error(f"❌ Error en Ollama: {response.status_code} - {error_text}")
-                        yield f"Error: No se pudo procesar la imagen ({response.status_code})"
+            # Llamar a vLLM con streaming usando connection pool
+            client = get_http_pool()  # Usar pool de conexiones reutilizable
+            async with client.stream(
+                "POST",
+                f"{self.llm.vllm_endpoint}chat/completions",
+                json={
+                    "model": "google/medgemma-27b-it",
+                    "messages": messages_data,
+                    "temperature": 0.7,
+                    "max_tokens": 100,
+                    "stream": True
+                }
+            ) as response:
+                if response.status_code == 200:
+                    logger.info("✅ Respuesta streaming iniciada correctamente")
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: ") and line.strip() != "data: [DONE]":
+                            try:
+                                data = json.loads(line[6:])
+                                if "choices" in data and len(data["choices"]) > 0:
+                                    delta_content = data["choices"][0].get("delta", {}).get("content", "")
+                                    if delta_content:
+                                        yield delta_content
+                            except:
+                                pass
+                else:
+                    error_text = await response.aread()
+                    logger.error(f"❌ Error en vLLM: {response.status_code} - {error_text}")
+                    yield f"Error: No se pudo procesar la imagen ({response.status_code})"
             
         except Exception as e:
             logger.error(f"❌ Error en análisis médico: {e}")
@@ -462,10 +563,21 @@ Prompt del usuario: {user_message if user_message else 'Analiza esta radiografí
 # Instancia global
 _medical_chain = None
 
-def get_medical_chain(ollama_endpoint: str = "http://localhost:11434/v1/") -> MedicalChain:
+def get_medical_chain(vllm_endpoint: str = None) -> MedicalChain:
     """Obtener instancia de la cadena médica"""
     global _medical_chain
+    
+    # Si no se proporciona endpoint, intentar obtener desde variables de entorno
+    if vllm_endpoint is None:
+        vllm_endpoint = os.getenv("VLLM_ENDPOINT", "http://localhost:8000/v1/")
+        # Asegurar que termine con /v1/ para compatibilidad con OpenAI API
+        if not vllm_endpoint.endswith("/v1/"):
+            if vllm_endpoint.endswith("/"):
+                vllm_endpoint = vllm_endpoint + "v1/"
+            else:
+                vllm_endpoint = vllm_endpoint + "/v1/"
+    
     if _medical_chain is None:
-        _medical_chain = MedicalChain(ollama_endpoint)
+        _medical_chain = MedicalChain(vllm_endpoint)
     return _medical_chain
 

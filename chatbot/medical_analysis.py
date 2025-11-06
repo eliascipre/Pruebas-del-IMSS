@@ -1,5 +1,5 @@
 """
-Sistema de análisis médico para imágenes - Ollama
+Sistema de análisis médico para imágenes - vLLM con Ray Serve
 """
 
 import base64
@@ -11,22 +11,28 @@ import json
 
 logger = logging.getLogger(__name__)
 
-# Configuración
-OLLAMA_ENDPOINT = os.getenv("OLLAMA_ENDPOINT", os.getenv("LM_STUDIO_ENDPOINT", "http://localhost:11434/v1/"))
-MODEL_NAME = "amsaravi/medgemma-4b-it:q8"
+# Configuración - Prioridad: VLLM_ENDPOINT > OLLAMA_ENDPOINT > LM_STUDIO_ENDPOINT
+VLLM_ENDPOINT = os.getenv("VLLM_ENDPOINT", os.getenv("OLLAMA_ENDPOINT", os.getenv("LM_STUDIO_ENDPOINT", "http://localhost:8000/v1/")))
+# Asegurar que termine con /v1/ para compatibilidad con OpenAI API
+if not VLLM_ENDPOINT.endswith("/v1/"):
+    if VLLM_ENDPOINT.endswith("/"):
+        VLLM_ENDPOINT = VLLM_ENDPOINT + "v1/"
+    else:
+        VLLM_ENDPOINT = VLLM_ENDPOINT + "/v1/"
+MODEL_NAME = "google/medgemma-27b-it"
 
 
 class MedicalImageAnalysis:
-    """Sistema de análisis de imágenes médicas con Ollama"""
+    """Sistema de análisis de imágenes médicas con vLLM con Ray Serve"""
     
     def __init__(self):
-        logger.info(f"✅ Configurado para usar Ollama en: {OLLAMA_ENDPOINT}")
+        logger.info(f"✅ Configurado para usar vLLM con Ray Serve en: {VLLM_ENDPOINT}")
         logger.info(f"✅ Modelo: {MODEL_NAME}")
     
     async def analyze_with_ollama(self, image_data: str, prompt: str) -> Dict[str, Any]:
-        """Analizar imagen usando Ollama local con formato multimodal"""
+        """Analizar imagen usando vLLM con Ray Serve con formato multimodal"""
         try:
-            logger.info(f"🤖 Analizando con Ollama: {MODEL_NAME}")
+            logger.info(f"🤖 Analizando con vLLM: {MODEL_NAME}")
             
             # Decodificar imagen para obtener metadata
             image_bytes = base64.b64decode(image_data)
@@ -69,12 +75,12 @@ Responde en español de manera detallada y profesional."""
             
             async with httpx.AsyncClient(timeout=120.0) as client:
                 response = await client.post(
-                    f"{OLLAMA_ENDPOINT}chat/completions",
+                    f"{VLLM_ENDPOINT}chat/completions",
                     json={
                         "model": MODEL_NAME,
                         "messages": messages,
                         "temperature": 0.7,
-                        "max_tokens": -1,
+                        "max_tokens": 100,
                         "stream": False
                     }
                 )
@@ -83,33 +89,33 @@ Responde en español de manera detallada y profesional."""
                     result = response.json()
                     analysis = result["choices"][0]["message"]["content"]
                     
-                    logger.info(f"✅ Ollama response recibida (análisis multimodal)")
+                    logger.info(f"✅ vLLM response recibida (análisis multimodal)")
                     return {
                         "success": True,
                         "analysis": analysis,
                         "model": MODEL_NAME,
-                        "provider": "ollama"
+                        "provider": "vllm"
                     }
                 else:
                     error_text = response.text
-                    logger.error(f"❌ Error en Ollama: {response.status_code} - {error_text}")
+                    logger.error(f"❌ Error en vLLM: {response.status_code} - {error_text}")
                     return {
                         "success": False,
                         "error": f"HTTP {response.status_code}: {error_text}",
-                        "provider": "ollama"
+                        "provider": "vllm"
                     }
         except Exception as e:
-            logger.error(f"❌ Error en análisis con Ollama: {str(e)}")
+            logger.error(f"❌ Error en análisis con vLLM: {str(e)}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 "success": False,
                 "error": str(e),
-                "provider": "ollama"
+                "provider": "vllm"
             }
     
     async def analyze_with_fallback(self, image_data: str, image_format: str, prompt: str) -> Dict[str, Any]:
-        """Análisis de imagen con Ollama"""
+        """Análisis de imagen con vLLM con Ray Serve"""
         return await self.analyze_with_ollama(image_data, prompt)
 
 
@@ -118,5 +124,5 @@ medical_analyzer = MedicalImageAnalysis()
 
 
 async def analyze_image_with_fallback(image_data: str, image_format: str, prompt: str) -> Dict[str, Any]:
-    """Función helper para análisis de imagen con Ollama"""
+    """Función helper para análisis de imagen con vLLM con Ray Serve"""
     return await medical_analyzer.analyze_with_fallback(image_data, image_format, prompt)

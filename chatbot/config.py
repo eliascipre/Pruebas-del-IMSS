@@ -13,9 +13,12 @@ class Config:
     USE_LOCAL_OBSERVABILITY = os.getenv('USE_LOCAL_OBSERVABILITY', 'false')
     
     # LLM Settings
-    DEFAULT_MODEL = 'gemini'
+    DEFAULT_MODEL = 'google/medgemma-27b-it'
     MAX_TOKENS = 2000
     TEMPERATURE = 0.7
+    
+    # vLLM Endpoint (Ray Serve)
+    VLLM_ENDPOINT = os.getenv('VLLM_ENDPOINT', 'http://localhost:8000/v1/')
     
     # Database
     DATABASE_URL = 'sqlite:///chatbot.db'

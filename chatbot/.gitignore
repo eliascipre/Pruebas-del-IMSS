@@ -1,0 +1,22 @@
+# Modelos de Whisper (descargados automáticamente)
+models/
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Cache de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Base de datos
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+

@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Image from "next/image"
 import Link from "next/link"
+import ProtectedRoute from "@/components/auth/protected-route"
 
-export default function MejoresPracticas() {
+function MejoresPracticasContent() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -367,5 +368,13 @@ export default function MejoresPracticas() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function MejoresPracticas() {
+  return (
+    <ProtectedRoute>
+      <MejoresPracticasContent />
+    </ProtectedRoute>
   )
 }

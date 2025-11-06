@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Image from "next/image"
 import Link from "next/link"
+import ProtectedRoute from "@/components/auth/protected-route"
 
-export default function Integraciones() {
+function IntegracionesContent() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -361,6 +362,14 @@ export default function Integraciones() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function Integraciones() {
+  return (
+    <ProtectedRoute>
+      <IntegracionesContent />
+    </ProtectedRoute>
   )
 }
 

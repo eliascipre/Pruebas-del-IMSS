@@ -21,7 +21,23 @@ source venv/bin/activate
 echo "📦 Instalando dependencias..."
 pip install -q -r requirements.txt
 
-# Iniciar FastAPI
-echo "🔥 Iniciando servidor..."
-uvicorn main:app --host 0.0.0.0 --port 5001 --reload
+# Iniciar FastAPI con optimizaciones para alto rendimiento
+echo "🔥 Iniciando servidor con optimizaciones..."
+echo "📊 Workers: 4"
+echo "⚡ Límite de concurrencia: 200"
+echo ""
+
+# Modo desarrollo (con reload)
+if [ "$1" == "dev" ]; then
+    uvicorn main:app --host 0.0.0.0 --port 5001 --reload
+# Modo producción (con workers)
+else
+    uvicorn main:app \
+        --host 0.0.0.0 \
+        --port 5001 \
+        --workers 4 \
+        --limit-concurrency 200 \
+        --timeout-keep-alive 30 \
+        --backlog 2048
+fi
 

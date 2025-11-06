@@ -35,6 +35,29 @@ export async function DELETE(
   return handleRequest(request, params, 'DELETE')
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { path: string[] } }
+) {
+  return handleRequest(request, params, 'PATCH')
+}
+
+export async function OPTIONS(
+  request: NextRequest,
+  { params }: { params: { path: string[] } }
+) {
+  // Manejar preflight CORS
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    },
+  })
+}
+
 async function handleRequest(
   request: NextRequest,
   params: { path: string[] },
@@ -64,9 +87,9 @@ async function handleRequest(
     }
     
     // Copiar headers relevantes del request original
-    const contentType = request.headers.get('content-type')
-    if (contentType) {
-      headers['Content-Type'] = contentType
+    const requestContentType = request.headers.get('content-type')
+    if (requestContentType) {
+      headers['Content-Type'] = requestContentType
     }
     
     const authorization = request.headers.get('authorization')
@@ -76,7 +99,7 @@ async function handleRequest(
 
     // Preparar body para requests que lo requieren
     let body: BodyInit | undefined
-    if (method === 'POST' || method === 'PUT') {
+    if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
       try {
         body = await request.text()
       } catch (error) {
@@ -93,22 +116,50 @@ async function handleRequest(
       signal: AbortSignal.timeout(30000)
     })
 
-    // Si la respuesta es JSON, parsearla y retornarla
-    if (response.headers.get('content-type')?.includes('application/json')) {
-      const data = await response.json()
-      return NextResponse.json(data, { 
+    // Agregar headers CORS a la respuesta
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    }
+
+    // Verificar si es una respuesta de streaming (text/event-stream o text/plain con stream)
+    const contentType = response.headers.get('content-type') || ''
+    const isStreaming = contentType.includes('text/event-stream') || 
+                        contentType.includes('text/plain') ||
+                        response.headers.get('transfer-encoding') === 'chunked'
+
+    // Si es streaming, retornar el stream directamente
+    if (isStreaming && response.body) {
+      return new NextResponse(response.body, {
         status: response.status,
-        statusText: response.statusText 
+        statusText: response.statusText,
+        headers: {
+          'Content-Type': contentType || 'text/plain',
+          'Transfer-Encoding': 'chunked',
+          ...corsHeaders
+        }
       })
     }
 
-    // Para respuestas que no son JSON (como archivos, streams, etc.)
+    // Si la respuesta es JSON, parsearla y retornarla
+    if (contentType.includes('application/json')) {
+      const data = await response.json()
+      return NextResponse.json(data, { 
+        status: response.status,
+        statusText: response.statusText,
+        headers: corsHeaders
+      })
+    }
+
+    // Para respuestas que no son JSON (como archivos, etc.)
     const responseBody = await response.text()
     return new NextResponse(responseBody, {
       status: response.status,
       statusText: response.statusText,
       headers: {
-        'Content-Type': response.headers.get('content-type') || 'text/plain'
+        'Content-Type': contentType || 'text/plain',
+        ...corsHeaders
       }
     })
 

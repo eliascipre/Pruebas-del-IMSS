@@ -17,3 +17,18 @@ aiofiles==23.2.1
 # Pydantic for FastAPI
 pydantic==2.10.2
 
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Performance optimizations
+aiosqlite==0.19.0
+slowapi==0.1.9
+
+# Whisper transcription (Hugging Face Transformers)
+transformers>=4.40.0
+datasets[audio]>=2.14.0
+accelerate>=0.20.0
+torch>=2.0.0
+torchaudio>=2.0.0
+

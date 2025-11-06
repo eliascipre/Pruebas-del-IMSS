@@ -370,4 +370,10 @@ xxhash
 yarl
 zipp
 zstandard
+# Whisper transcription (Hugging Face Transformers) - ver chatbot/requirements.txt
+# transformers>=4.40.0
+# datasets[audio]>=2.14.0
+# accelerate>=0.20.0
+# torch>=2.0.0
+# torchaudio>=2.0.0
 

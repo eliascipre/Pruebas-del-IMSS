@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Image from "next/image"
 import Link from "next/link"
+import ProtectedRoute from "@/components/auth/protected-route"
 
-export default function Contacto() {
+function ContactoContent() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -409,5 +410,13 @@ export default function Contacto() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function Contacto() {
+  return (
+    <ProtectedRoute>
+      <ContactoContent />
+    </ProtectedRoute>
   )
 }

@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Image from "next/image"
 import Link from "next/link"
+import ProtectedRoute from "@/components/auth/protected-route"
 
-export default function SoporteTecnico() {
+function SoporteTecnicoContent() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -413,5 +414,13 @@ export default function SoporteTecnico() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function SoporteTecnico() {
+  return (
+    <ProtectedRoute>
+      <SoporteTecnicoContent />
+    </ProtectedRoute>
   )
 }
