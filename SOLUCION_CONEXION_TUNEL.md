@@ -102,3 +102,4 @@ Se ha implementado la funcionalidad de speech-to-text con Whisper:
 - Para mejor precisión, cambiar `_model_name = "base"` a `"small"` o `"medium"` en `transcription_service.py`
 - La primera carga del modelo Whisper puede tardar unos segundos
 
+

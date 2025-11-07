@@ -8,7 +8,6 @@ from typing import Dict, List, Optional, Any, AsyncGenerator
 import asyncio
 import httpx
 from langchain_openai import ChatOpenAI
-from optimizations import get_http_pool
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage, ChatMessage
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain_core.runnables import RunnableLambda, RunnableParallel, RunnableSequence, RunnablePassthrough
@@ -31,7 +30,7 @@ class FallbackLLM:
             api_key="not-needed",  # api_key dummy para vLLM (requerido pero no usado)
             temperature=0.7,
             max_tokens=100,  # Configurable según necesidad
-            streaming=False,  # Sin streaming - recibir respuesta completa
+            streaming=True,
         )
         
         logger.info(f"✅ Configurado para usar vLLM con Ray Serve en: {vllm_endpoint}")
@@ -48,13 +47,65 @@ class FallbackLLM:
             raise
     
     async def stream(self, messages: List[BaseMessage], **kwargs) -> AsyncGenerator[str, None]:
-        """Streaming desde vLLM con Ray Serve"""
+        """Streaming desde vLLM con Ray Serve - Calcula deltas explícitamente para evitar duplicación"""
         try:
+            previous_text = ""  # Texto acumulado anterior para calcular deltas
+            last_chunk_delta = ""  # Último delta enviado para detectar si necesita espacio
+            
             async for chunk in self.ollama_llm.astream(messages, **kwargs):
-                if hasattr(chunk, 'content'):
-                    yield chunk.content
+                chunk_content = chunk.content if hasattr(chunk, 'content') else str(chunk)
+                
+                if chunk_content:
+                    # CRÍTICO: Calcular delta explícitamente
+                    # LangChain puede devolver texto acumulado o deltas, así que verificamos ambos casos
+                    current_text = chunk_content
+                    
+                    # Verificar si es texto acumulado (contiene el texto anterior)
+                    if len(current_text) > len(previous_text) and current_text.startswith(previous_text):
+                        # Es texto acumulado, calcular delta
+                        delta = current_text[len(previous_text):]
+                        previous_text = current_text
+                        logger.debug(f"📦 Chunk acumulado detectado: '{current_text[:50]}...' → Delta: '{delta}'")
+                    elif current_text == previous_text:
+                        # Mismo texto, ignorar (no hay nuevo contenido)
+                        continue
+                    else:
+                        # Es un delta directo (solo nuevos tokens)
+                        delta = current_text
+                        previous_text += delta
+                        logger.debug(f"📦 Delta directo: '{delta}'")
+                    
+                    if delta:
+                        # Si hay un delta anterior, verificar si necesita espacio
+                        if last_chunk_delta:
+                            last_char = last_chunk_delta[-1] if last_chunk_delta else ""
+                            first_char = delta[0] if delta else ""
+                            
+                            # Detectar si necesita espacio entre chunks
+                            needs_space = False
+                            
+                            # Caso 1: Si el último delta termina con letra/número y el nuevo empieza con letra/número
+                            if last_char.isalnum() and first_char.isalnum():
+                                # Si el último delta no termina con espacio y el nuevo no empieza con espacio
+                                if not last_chunk_delta.endswith(' ') and not delta.startswith(' '):
+                                    needs_space = True
+                                    logger.debug(f"🔧 Agregando espacio: '{last_chunk_delta[-10:]}' + ' ' + '{delta[:10]}'")
+                            
+                            # Caso 2: Si el último delta termina con signo de puntuación de cierre y el nuevo empieza con letra/número
+                            elif last_char in '.,!?;:' and first_char.isalnum():
+                                needs_space = True
+                                logger.debug(f"🔧 Agregando espacio después de puntuación: '{last_chunk_delta[-10:]}' + ' ' + '{delta[:10]}'")
+                            
+                            if needs_space:
+                                yield " "
+                        
+                        # Enviar el delta (solo los nuevos caracteres)
+                        logger.debug(f"📤 Enviando delta: '{delta}' (longitud: {len(delta)})")
+                        yield delta
+                        last_chunk_delta = delta
                 else:
-                    yield str(chunk)
+                    last_chunk_delta = ""
+                    
         except Exception as e:
             logger.error(f"❌ Error en streaming: {e}")
             yield f"Error: {str(e)}"
@@ -190,6 +241,56 @@ y tratamientos médicos. Responde en español."""
             logger.warning(f"⚠️ No se pudieron cargar few-shots: {e}")
         return []
     
+    def _fix_fragmented_words(self, text: str) -> str:
+        """Corregir palabras fragmentadas comunes en español"""
+        if not text:
+            return text
+        
+        import re
+        
+        original_text = text
+        logger.debug(f"🔧 Corrigiendo palabras fragmentadas (longitud: {len(text)})")
+        logger.debug(f"📝 Texto original: '{text[:100]}...'")
+        
+        # Correcciones específicas para fragmentos comunes
+        # Orden importante: aplicar las más específicas primero
+        
+        # 1. Corregir "¡ola" -> "¡Hola" (al inicio o después de espacio)
+        text = re.sub(r'(^|\s)¡ola', r'\1¡Hola', text, flags=re.IGNORECASE)
+        
+        # 2. Corregir "ola" al inicio de frase -> "Hola"
+        if text.startswith('ola') or text.startswith('¡ola'):
+            if text.startswith('¡ola'):
+                text = '¡Hola' + text[4:]
+            elif text.startswith('ola'):
+                text = 'Hola' + text[3:]
+        
+        # 3. Corregir "¿ué" -> "¿Qué" (al inicio o después de espacio)
+        text = re.sub(r'(^|\s)¿ué', r'\1¿Qué', text, flags=re.IGNORECASE)
+        
+        # 4. Corregir "ué" después de "¿" -> "Qué"
+        text = re.sub(r'¿ué', '¿Qué', text, flags=re.IGNORECASE)
+        
+        # 5. Corregir "do rte" -> "duele"
+        text = re.sub(r'do\s+rte', 'duele', text, flags=re.IGNORECASE)
+        
+        # 6. Corregir "rte" después de "do " -> "duele"
+        text = re.sub(r'do\s+rte', 'duele', text, flags=re.IGNORECASE)
+        
+        # 7. Corregir "ola" seguido de signo de puntuación -> "Hola"
+        text = re.sub(r'ola([¿¡\s])', r'Hola\1', text, flags=re.IGNORECASE)
+        
+        # 8. Corregir "ué" seguido de signo de puntuación -> "Qué"
+        text = re.sub(r'ué([¿¡\s])', r'Qué\1', text, flags=re.IGNORECASE)
+        
+        if text != original_text:
+            logger.debug(f"✅ Texto corregido (longitud: {len(text)})")
+            logger.debug(f"📝 Texto corregido: '{text[:100]}...'")
+        else:
+            logger.debug(f"ℹ️ Texto no cambió después de corrección")
+        
+        return text
+    
     def _normalize_text(self, text: str) -> str:
         """Normalizar texto para asegurar espacios correctos entre palabras"""
         if not text:
@@ -197,7 +298,16 @@ y tratamientos médicos. Responde en español."""
         
         import re
         
-        # Primero, normalizar espacios múltiples a un solo espacio
+        original_text = text
+        logger.debug(f"🔧 Normalizando texto (longitud original: {len(text)})")
+        logger.debug(f"📝 Texto original: '{text[:100]}...'")
+        
+        # Primero, corregir palabras fragmentadas
+        text = self._fix_fragmented_words(text)
+        if text != original_text:
+            logger.debug(f"✅ Texto corregido después de fix_fragmented_words: '{text[:100]}...'")
+        
+        # Normalizar espacios múltiples a un solo espacio
         text = re.sub(r'\s+', ' ', text)
         
         # Detectar y separar palabras concatenadas (palabras en español comunes)
@@ -219,25 +329,17 @@ y tratamientos médicos. Responde en español."""
         # Asegurar espacios después de signos de puntuación de cierre
         text = re.sub(r'([!?])([^\s])', r'\1 \2', text)
         
-        # Separar palabras comunes concatenadas (patrones comunes en español)
-        # Ejemplo: "puedoayudarte" -> "puedo ayudarte"
-        common_patterns = [
-            (r'([a-záéíóúñü]+)(puedo|soy|eres|es|son|estoy|estás|está|están)', r'\1 \2'),
-            (r'(puedo|soy|eres|es|son|estoy|estás|está|están)([a-záéíóúñü]+)', r'\1 \2'),
-            (r'([a-záéíóúñü]+)(ayudarte|ayudar|ayuda|ayudan)', r'\1 \2'),
-            (r'(ayudarte|ayudar|ayuda|ayudan)([a-záéíóúñü]+)', r'\1 \2'),
-            (r'([a-záéíóúñü]+)(asistente|especializado|médico)', r'\1 \2'),
-            (r'(asistente|especializado|médico)([a-záéíóúñü]+)', r'\1 \2'),
-        ]
-        
-        for pattern, replacement in common_patterns:
-            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-        
         # Normalizar espacios múltiples nuevamente después de todas las transformaciones
         text = re.sub(r'\s+', ' ', text)
         
         # Limpiar espacios al inicio y final
         text = text.strip()
+        
+        if text != original_text:
+            logger.debug(f"✅ Texto normalizado (longitud: {len(text)})")
+            logger.debug(f"📝 Texto normalizado: '{text[:100]}...'")
+        else:
+            logger.debug(f"ℹ️ Texto no cambió después de normalización")
         
         return text
     
@@ -285,24 +387,8 @@ y tratamientos médicos. Responde en español."""
             # Invocar LLM directamente con los mensajes
             response = await self.llm.ollama_llm.ainvoke(messages_list)
             
-            # Extraer contenido - asegurar que obtenemos el contenido correctamente
-            if hasattr(response, 'content'):
-                answer = response.content
-            elif hasattr(response, 'text'):
-                answer = response.text
-            else:
-                answer = str(response)
-            
-            # Parsear con OutputParser si es necesario
-            try:
-                answer = self.output_parser.parse(answer)
-            except Exception:
-                # Si el parser falla, usar el texto directamente
-                pass
-            
-            # Normalizar el texto: asegurar espacios correctos entre palabras
-            # Esto corrige problemas donde los tokens se concatenan sin espacios
-            answer = self._normalize_text(answer)
+            # Extraer contenido usando OutputParser
+            answer = self.output_parser.parse(response.content if hasattr(response, 'content') else str(response))
 
             # Guardar en memoria
             self.memory.add_message("user", user_message)
@@ -359,19 +445,17 @@ y tratamientos médicos. Responde en español."""
 
             messages_data = [to_openai(m) for m in messages]
 
-            # Usar connection pool para estimación de tokens
-            client = get_http_pool()
-            resp = await client.post(
-                f"{self.llm.vllm_endpoint}chat/completions",
-                json={
-                    "model": "google/medgemma-27b-it",
-                    "messages": messages_data,
-                    "temperature": 0.0,
-                    "max_tokens": 1,
-                    "stream": False,
-                },
-                timeout=60.0
-            )
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(
+                    f"{self.llm.vllm_endpoint}chat/completions",
+                    json={
+                        "model": "google/medgemma-27b-it",
+                        "messages": messages_data,
+                        "temperature": 0.0,
+                        "max_tokens": 1,
+                        "stream": False,
+                    },
+                )
             if resp.status_code == 200:
                 data = resp.json()
                 usage = data.get("usage", {})
@@ -428,15 +512,76 @@ y tratamientos médicos. Responde en español."""
             messages_list.append(HumanMessage(content=user_message))
 
             # Stream response usando LangChain con LCEL
-            # Usar RunnableSequence para streaming: messages -> LLM (streaming) -> OutputParser
-            full_response = ""
-            async for chunk in self.llm.stream(messages_list):
-                full_response += chunk
-                yield chunk
+            # Los espacios ya se agregan automáticamente en self.llm.stream()
+            # Acumular chunks y aplicar corrección de palabras fragmentadas
+            accumulated_text = ""
+            last_sent_length = 0  # Longitud del texto ya enviado
+            chunk_count = 0
+            buffer = ""  # Buffer para acumular chunks antes de corregir
+            buffer_size = 15  # Corregir cada 15 caracteres acumulados
             
-            # Guardar en memoria
-            self.memory.add_message("user", user_message)
-            self.memory.add_message("assistant", full_response)
+            logger.info(f"🔄 Iniciando streaming para mensaje: {user_message[:50]}...")
+            
+            async for chunk in self.llm.stream(messages_list):
+                chunk_count += 1
+                if chunk:
+                    logger.debug(f"📦 Chunk #{chunk_count} recibido: '{chunk}' (longitud: {len(chunk)})")
+                    accumulated_text += chunk
+                    buffer += chunk
+                    
+                    # Enviar chunk directamente (ya tiene espacios agregados por stream())
+                    yield chunk
+                    
+                    # Corregir palabras fragmentadas periódicamente
+                    if len(buffer) >= buffer_size:
+                        logger.debug(f"🔧 Corrigiendo palabras fragmentadas en buffer (tamaño: {len(buffer)})")
+                        logger.debug(f"📝 Texto acumulado antes de corrección: '{accumulated_text[:100]}...'")
+                        
+                        # Corregir palabras fragmentadas en el texto acumulado
+                        corrected = self._fix_fragmented_words(accumulated_text)
+                        
+                        if corrected != accumulated_text:
+                            logger.info(f"✅ Texto corregido: '{corrected[:100]}...'")
+                            # Calcular la diferencia entre lo ya enviado y lo corregido
+                            if len(corrected) > last_sent_length:
+                                new_text = corrected[last_sent_length:]
+                                if new_text:
+                                    logger.info(f"📤 Enviando corrección: '{new_text[:50]}...' (longitud: {len(new_text)})")
+                                    yield new_text
+                                    last_sent_length = len(corrected)
+                            accumulated_text = corrected
+                        
+                        buffer = ""  # Limpiar buffer
+            
+            # Corregir y normalizar el texto final antes de guardar
+            if accumulated_text:
+                logger.info(f"🔧 Corrigiendo y normalizando texto final (tamaño: {len(accumulated_text)})")
+                logger.debug(f"📝 Texto final antes de corrección: '{accumulated_text[:200]}...'")
+                
+                # Corregir palabras fragmentadas
+                corrected = self._fix_fragmented_words(accumulated_text)
+                
+                # Normalizar el texto
+                final_normalized = self._normalize_text(corrected)
+                
+                logger.debug(f"📝 Texto final después de corrección y normalización: '{final_normalized[:200]}...'")
+                
+                # Enviar cualquier diferencia final
+                if len(final_normalized) > last_sent_length:
+                    remaining = final_normalized[last_sent_length:]
+                    if remaining:
+                        logger.info(f"📤 Enviando corrección final: '{remaining[:50]}...' (longitud: {len(remaining)})")
+                        yield remaining
+                
+                logger.info(f"✅ Streaming completado - Total chunks: {chunk_count}, Texto final: {len(final_normalized)} caracteres")
+                
+                # Guardar en memoria con texto corregido y normalizado
+                self.memory.add_message("user", user_message)
+                self.memory.add_message("assistant", final_normalized)
+            else:
+                # Si no hay texto acumulado, guardar vacío
+                self.memory.add_message("user", user_message)
+                self.memory.add_message("assistant", "")
             
         except Exception as e:
             logger.error(f"❌ Error en streaming: {e}")
@@ -525,35 +670,35 @@ Prompt del usuario: {user_message if user_message else 'Analiza esta radiografí
             logger.info(f"🖼️ Enviando imagen multimodal a vLLM con Ray Serve...")
             logger.info(f"📏 Tamaño de imagen base64: {len(image_data)} caracteres")
             
-            # Llamar a vLLM con streaming usando connection pool
-            client = get_http_pool()  # Usar pool de conexiones reutilizable
-            async with client.stream(
-                "POST",
-                f"{self.llm.vllm_endpoint}chat/completions",
-                json={
-                    "model": "google/medgemma-27b-it",
-                    "messages": messages_data,
-                    "temperature": 0.7,
-                    "max_tokens": 100,
-                    "stream": True
-                }
-            ) as response:
-                if response.status_code == 200:
-                    logger.info("✅ Respuesta streaming iniciada correctamente")
-                    async for line in response.aiter_lines():
-                        if line.startswith("data: ") and line.strip() != "data: [DONE]":
-                            try:
-                                data = json.loads(line[6:])
-                                if "choices" in data and len(data["choices"]) > 0:
-                                    delta_content = data["choices"][0].get("delta", {}).get("content", "")
-                                    if delta_content:
-                                        yield delta_content
-                            except:
-                                pass
-                else:
-                    error_text = await response.aread()
-                    logger.error(f"❌ Error en vLLM: {response.status_code} - {error_text}")
-                    yield f"Error: No se pudo procesar la imagen ({response.status_code})"
+            # Llamar a vLLM con streaming
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{self.llm.vllm_endpoint}chat/completions",
+                    json={
+                        "model": "google/medgemma-27b-it",
+                        "messages": messages_data,
+                        "temperature": 0.7,
+                        "max_tokens": 100,
+                        "stream": True
+                    }
+                ) as response:
+                    if response.status_code == 200:
+                        logger.info("✅ Respuesta streaming iniciada correctamente")
+                        async for line in response.aiter_lines():
+                            if line.startswith("data: ") and line.strip() != "data: [DONE]":
+                                try:
+                                    data = json.loads(line[6:])
+                                    if "choices" in data and len(data["choices"]) > 0:
+                                        delta_content = data["choices"][0].get("delta", {}).get("content", "")
+                                        if delta_content:
+                                            yield delta_content
+                                except:
+                                    pass
+                    else:
+                        error_text = await response.aread()
+                        logger.error(f"❌ Error en vLLM: {response.status_code} - {error_text}")
+                        yield f"Error: No se pudo procesar la imagen ({response.status_code})"
             
         except Exception as e:
             logger.error(f"❌ Error en análisis médico: {e}")

@@ -269,3 +269,4 @@ pnpm dev
 3. ✅ **`.env.local`**: Configurado con la URL del backend
 4. ✅ **Peticiones**: El frontend usa la URL del backend desde `.env.local`
 
+

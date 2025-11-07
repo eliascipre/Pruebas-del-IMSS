@@ -427,3 +427,4 @@ memory_manager.log_chat_metrics(
 - **Frontend Stream Reader**: `UI_IMSS/app/chat/page.tsx` líneas 311-466
 - **Normalización Markdown**: `UI_IMSS/app/chat/page.tsx` líneas 78-210
 
+

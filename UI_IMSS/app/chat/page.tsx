@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useRef } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import ReactMarkdown from "react-markdown"
@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import ProtectedRoute from "@/components/auth/protected-route"
-import { getBackendUrl, fetchAuthenticated } from "@/lib/api-client"
 
 interface Message {
   role: 'user' | 'assistant'
@@ -33,10 +32,18 @@ function ChatPageContent() {
   const [userId, setUserId] = useState<string>("")
   const [conversations, setConversations] = useState<ConversationItem[]>([])
   const [loadingConvs, setLoadingConvs] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const [isTranscribing, setIsTranscribing] = useState(false)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
+  // Config removida
+
+  const getBackendUrl = useMemo(() => {
+    return () => {
+      if (typeof window !== 'undefined') {
+        const protocol = window.location.protocol
+        const hostname = window.location.hostname
+        return `${protocol}//${hostname}:5001`
+      }
+      return process.env.NEXT_PUBLIC_CHATBOT_URL || 'http://localhost:5001'
+    }
+  }, [])
 
   const getAuthHeaders = useMemo(() => {
     return () => {
@@ -65,9 +72,15 @@ function ChatPageContent() {
   }, [])
 
   const fetchConversations = async () => {
+    if (!userId) return
     setLoadingConvs(true)
     try {
-      const data = await fetchAuthenticated<{ conversations: any[] }>("/api/conversations")
+      const url = new URL(`${getBackendUrl()}/api/conversations`)
+      url.searchParams.set('user_id', userId)
+      const res = await fetch(url.toString(), {
+        headers: getAuthHeaders()
+      })
+      const data = await res.json()
       const items: ConversationItem[] = (data.conversations || []).map((c: any) => ({ id: c.id, title: c.title, updated_at: c.updated_at }))
       setConversations(items)
     } catch (e) {
@@ -77,10 +90,7 @@ function ChatPageContent() {
     }
   }
 
-  useEffect(() => { 
-    // Cargar conversaciones cuando el componente se monta o cuando cambia el token
-    fetchConversations() 
-  }, []) // Ya no depende de userId, el backend lo obtiene del token
+  useEffect(() => { fetchConversations() }, [userId])
 
   // Normalizar contenido markdown para asegurar que las tablas se rendericen correctamente
   // Esta función es más simple y robusta, similar a cómo funciona en siem-tracker-ia
@@ -205,39 +215,116 @@ function ChatPageContent() {
     }])
 
     try {
+      // Detectar la URL del backend dinámicamente
+      const getBackendUrl = () => {
+        // Si estamos en el cliente, usar la misma URL base del navegador
+        if (typeof window !== 'undefined') {
+          const protocol = window.location.protocol
+          const hostname = window.location.hostname
+          // Si la UI corre en un puerto diferente, usar el hostname actual
+          // y asumir que los servicios están en el mismo host con diferentes puertos
+          return `${protocol}//${hostname}:5001`
+        }
+        // Fallback para SSR (aunque esta es una página client-side)
+        return process.env.NEXT_PUBLIC_CHATBOT_URL || 'http://localhost:5001'
+      }
+      
       // Si no hay sessionId, crear una conversación primero
       let currentSession = sessionId
       if (!currentSession) {
         try {
-          const data = await fetchAuthenticated<{ session_id: string }>("/api/conversations", {
+          const res = await fetch(`${getBackendUrl()}/api/conversations`, {
             method: 'POST',
-            body: JSON.stringify({ title: 'Nueva conversación' })
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ user_id: userId, title: 'Nueva conversación' })
           })
+          const data = await res.json()
           currentSession = data.session_id
           setSessionId(currentSession)
           fetchConversations()
         } catch (e) { console.error(e) }
       }
 
-      // Llamar al backend usando fetchAuthenticated (sin streaming)
-      const response = await fetchAuthenticated<{ response: string; session_id: string }>("/api/chat", {
+      // Llamar al backend (la autenticación ya se verifica en ProtectedRoute)
+      const response = await fetch(`${getBackendUrl()}/api/chat`, {
         method: 'POST',
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           message: userMessage,
           image: imageToSend, // Imagen en base64
           image_format: 'jpeg',
           session_id: currentSession || undefined,
+          user_id: userId || undefined,
+          stream: true, // Usar streaming para mejor UX
         }),
       })
 
-      // Agregar respuesta del asistente
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        text: response.response || 'Lo siento, no pude generar una respuesta.'
-      }])
+      if (!response.ok) {
+        throw new Error('Error al enviar mensaje')
+      }
 
-      // Recargar conversaciones después de enviar mensaje
-      fetchConversations()
+      // Leer stream - usando el mismo patrón que funciona en Quetzalia
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let assistantMessage = ""
+      let buffer = ""
+
+      // Agregar mensaje vacío del asistente
+      setMessages((prev) => [...prev, { role: "assistant", text: "" }])
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split("\n")
+          buffer = lines.pop() || ""
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const dataStr = line.slice(6)
+              
+              if (dataStr.trim() === "[DONE]") {
+                continue
+              }
+
+              try {
+                const data = JSON.parse(dataStr)
+                
+                if (data.done) {
+                  // Stream terminado
+                  // Recargar conversaciones después de enviar mensaje
+                  fetchConversations()
+                  break
+                }
+
+                if (data.content) {
+                  // Si el contenido viene procesado (con tablas convertidas a HTML), reemplazar todo
+                  if (data.processed) {
+                    assistantMessage = data.content
+                  } else {
+                    assistantMessage += data.content
+                  }
+                  // Actualizar el último mensaje (asistente)
+                  setMessages((prev) => {
+                    const newMessages = [...prev]
+                    newMessages[newMessages.length - 1] = {
+                      role: "assistant",
+                      text: assistantMessage,
+                    }
+                    return newMessages
+                  })
+                }
+              } catch (e) {
+                // Ignorar errores de parsing
+                console.warn("Error parsing SSE data:", e)
+              }
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error:', error)
       setMessages(prev => [...prev, {
@@ -257,11 +344,14 @@ function ChatPageContent() {
   }
 
   const handleNewChat = async () => {
+    if (!userId) return
     try {
-      const data = await fetchAuthenticated<{ session_id: string }>("/api/conversations", {
+      const res = await fetch(`${getBackendUrl()}/api/conversations`, {
         method: 'POST',
-        body: JSON.stringify({ title: 'Nueva conversación' })
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ user_id: userId, title: 'Nueva conversación' })
       })
+      const data = await res.json()
       setSessionId(data.session_id)
       setMessages([])
       fetchConversations()
@@ -269,108 +359,18 @@ function ChatPageContent() {
   }
 
   const handleDeleteAll = async () => {
+    if (!userId) return
     try {
-      await fetchAuthenticated("/api/conversations", { 
-        method: 'DELETE'
+      const url = new URL(`${getBackendUrl()}/api/conversations`)
+      url.searchParams.set('user_id', userId)
+      await fetch(url.toString(), { 
+        method: 'DELETE',
+        headers: getAuthHeaders()
       })
       setMessages([])
       setSessionId("")
       fetchConversations()
-    } catch (e) { 
-      console.error('Error eliminando conversaciones:', e) 
-    }
-  }
-
-  // Funciones de speech-to-text
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      })
-      
-      mediaRecorderRef.current = mediaRecorder
-      audioChunksRef.current = []
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
-        }
-      }
-
-      mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach(track => track.stop())
-        await transcribeAudio()
-      }
-
-      mediaRecorder.start()
-      setIsRecording(true)
-    } catch (error) {
-      console.error('Error al iniciar grabación:', error)
-      alert('Error al acceder al micrófono. Por favor verifica los permisos.')
-    }
-  }
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop()
-      setIsRecording(false)
-    }
-  }
-
-  const transcribeAudio = async () => {
-    if (audioChunksRef.current.length === 0) {
-      return
-    }
-
-    setIsTranscribing(true)
-    try {
-      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' })
-      
-      // Convertir a base64
-      const reader = new FileReader()
-      reader.onloadend = async () => {
-        const base64Audio = (reader.result as string).split(',')[1]
-        
-        try {
-          // Usar el proxy de Next.js para evitar problemas de CORS
-          const response = await fetch('/api/proxy/chatbot/transcribe', {
-            method: 'POST',
-            headers: {
-              ...getAuthHeaders(),
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              audio_data: base64Audio,
-              audio_format: 'webm'
-            })
-          })
-
-          if (!response.ok) {
-            throw new Error('Error en la transcripción')
-          }
-
-          const data = await response.json()
-          if (data.success && data.text) {
-            // Poner el texto transcrito en el input
-            setInput(data.text.trim())
-          } else {
-            alert('No se pudo transcribir el audio. Por favor intenta de nuevo.')
-          }
-        } catch (error) {
-          console.error('Error en transcripción:', error)
-          alert('Error al transcribir el audio. Por favor intenta de nuevo.')
-        } finally {
-          setIsTranscribing(false)
-          audioChunksRef.current = []
-        }
-      }
-      reader.readAsDataURL(audioBlob)
-    } catch (error) {
-      console.error('Error procesando audio:', error)
-      setIsTranscribing(false)
-      audioChunksRef.current = []
-    }
+    } catch (e) { console.error(e) }
   }
 
   return (
@@ -435,12 +435,10 @@ function ChatPageContent() {
                       const title = prompt('Nuevo título', c.title || 'Conversación')
                       if (!title || !title.trim()) return
                       try {
-                        // El backend ahora obtiene el user_id del token, no es necesario pasarlo
-                        // Usar el proxy de Next.js para evitar problemas de CORS
-                        await fetch(`/api/proxy/chatbot/conversations/${c.id}`, {
+                        await fetch(`${getBackendUrl()}/api/conversations/${c.id}`, {
                           method: 'PATCH',
                           headers: getAuthHeaders(),
-                          body: JSON.stringify({ title: title.trim() })
+                          body: JSON.stringify({ user_id: userId, title: title.trim() })
                         })
                         fetchConversations()
                       } catch (e) { console.error(e) }
@@ -571,17 +569,16 @@ function ChatPageContent() {
               {messages.length > 0 && messages.map((msg, idx) => (
                 <div key={idx} className="flex gap-2 sm:gap-3">
                   <div className={`flex-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                    <div className={`inline-block max-w-full px-3 py-2 sm:px-4 sm:py-2 rounded-lg break-words ${
+                    <div className={`inline-block px-3 py-2 sm:px-4 sm:py-2 rounded-lg ${
                       msg.role === 'user' ? 'bg-[#068959] text-white' : 'bg-gray-100 text-gray-900'
-                    }`} style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                    }`}>
                       {msg.role === 'assistant' ? (
-                        <div className="max-w-full leading-relaxed markdown-content break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                        <div className="max-w-none leading-relaxed markdown-content">
                           {/* Detectar si el contenido contiene HTML procesado (tablas del backend) */}
                           {msg.text.includes('<table') || msg.text.includes('<div class="overflow-x-auto') || msg.text.includes('<thead') ? (
                             <div 
                               dangerouslySetInnerHTML={{ __html: msg.text }}
-                              className="max-w-full break-words"
-                              style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                              className="max-w-none"
                             />
                           ) : (
                             <ReactMarkdown
@@ -591,7 +588,7 @@ function ChatPageContent() {
                               components={{
                                 // Estilos para párrafos
                                 p: ({ children }: { children?: React.ReactNode }) => (
-                                  <p className="mb-2 last:mb-0 break-words text-gray-900" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{children}</p>
+                                  <p className="mb-2 last:mb-0 break-words text-gray-900">{children}</p>
                                 ),
                                 // Estilos para encabezados
                                 h1: ({ children }: { children?: React.ReactNode }) => (
@@ -698,9 +695,12 @@ function ChatPageContent() {
                               {normalizeMarkdown(msg.text)}
                             </ReactMarkdown>
                           )}
+                          {idx === messages.length - 1 && isLoading && (
+                            <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse" />
+                          )}
                         </div>
                       ) : (
-                        <p className="whitespace-pre-wrap leading-relaxed break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                        <p className="whitespace-pre-wrap leading-relaxed break-words">
                           {msg.text}
                         </p>
                       )}
@@ -746,28 +746,8 @@ function ChatPageContent() {
                   accept="image/jpeg,image/jpg,image/png"
                   onChange={handleImageSelect}
                   className="hidden"
-                  disabled={isLoading || isRecording || isTranscribing}
+                  disabled={isLoading}
                 />
-                <button
-                  onClick={isRecording ? stopRecording : startRecording}
-                  disabled={isLoading || isTranscribing}
-                  className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center transition-colors ${
-                    isRecording 
-                      ? 'text-red-500 hover:text-red-600 animate-pulse' 
-                      : 'text-gray-400 hover:text-[#068959]'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  title={isRecording ? 'Detener grabación' : 'Iniciar grabación de voz'}
-                >
-                  {isTranscribing ? (
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    </svg>
-                  )}
-                </button>
                 <input
                   type="text"
                   value={input}
@@ -775,11 +755,11 @@ function ChatPageContent() {
                   onKeyPress={handleKeyPress}
                   placeholder="¿Qué tienes en mente?..."
                   className="flex-1 bg-transparent outline-none text-gray-900 placeholder-gray-400 text-sm sm:text-base"
-                  disabled={isLoading || isRecording || isTranscribing}
+                  disabled={isLoading}
                 />
                 <button 
                   onClick={handleSendMessage}
-                  disabled={isLoading || (!input.trim() && !selectedImage) || isRecording || isTranscribing}
+                  disabled={isLoading || (!input.trim() && !selectedImage)}
                   className="w-9 h-9 sm:w-10 sm:h-10 bg-[#068959] rounded-full flex items-center justify-center hover:bg-[#057a4a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -124,3 +124,4 @@ Si Cloudflare soporta rutas, puedes configurar:
 - El código está configurado para usar esta URL automáticamente
 - Si cambias el túnel, actualiza `NEXT_PUBLIC_CHATBOT_URL` en `.env.local`
 
+

@@ -86,3 +86,4 @@ Después de los cambios:
    - Con token en `/login`: `/login` → `/home`
    - Sin token en `/home`: `/home` → `/login`
 
+

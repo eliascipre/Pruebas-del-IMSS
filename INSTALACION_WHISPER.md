@@ -111,3 +111,4 @@ _model_id = "openai/whisper-base"  # ~150MB
 - [Documentación oficial de Whisper large-v3-turbo](https://huggingface.co/openai/whisper-large-v3-turbo)
 - [Hugging Face Transformers](https://huggingface.co/docs/transformers)
 
+

@@ -189,3 +189,4 @@ function isTokenCached(): boolean {
 5. **Fase 5 (Medio)**: Rate limiting
 6. **Fase 6 (Bajo)**: Optimizaciones frontend
 
+

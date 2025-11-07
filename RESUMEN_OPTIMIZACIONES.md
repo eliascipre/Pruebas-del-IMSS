@@ -98,3 +98,4 @@ python main.py
 2. **vLLM**: El cuello de botella principal puede ser el tiempo de respuesta de vLLM, no el backend.
 3. **Monitoreo**: Considerar agregar métricas de rendimiento para monitorear en producción.
 
+
