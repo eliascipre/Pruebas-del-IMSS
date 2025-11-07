@@ -6,6 +6,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Ocultar indicador de desarrollo de Next.js
+  devIndicators: {
+    buildActivity: false,
+    buildActivityPosition: 'bottom-right',
+  },
   // Configuración de Turbopack (Next.js 16 usa Turbopack por defecto)
   turbopack: {},
   // Configuración para acceso desde red local

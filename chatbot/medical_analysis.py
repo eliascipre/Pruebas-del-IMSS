@@ -80,7 +80,7 @@ Responde en español de manera detallada y profesional."""
                         "model": MODEL_NAME,
                         "messages": messages,
                         "temperature": 0.7,
-                        "max_tokens": 100,
+                        "max_tokens": 2048,  # Aumentado de 100 a 2048 para respuestas más completas
                         "stream": False
                     }
                 )

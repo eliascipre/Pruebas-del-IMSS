@@ -310,3 +310,5 @@ curl http://localhost:8000/v1/chat/completions \
 3. Más eficiente (menos capas de abstracción)
 
 
+
+

@@ -8,6 +8,7 @@ import remarkGfm from "remark-gfm"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Spinner } from "@/components/ui/spinner"
 import ProtectedRoute from "@/components/auth/protected-route"
 
 interface Message {
@@ -32,6 +33,8 @@ function ChatPageContent() {
   const [userId, setUserId] = useState<string>("")
   const [conversations, setConversations] = useState<ConversationItem[]>([])
   const [loadingConvs, setLoadingConvs] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   // Config removida
 
   const getBackendUrl = useMemo(() => {
@@ -197,6 +200,78 @@ function ChatPageContent() {
     setImagePreview(null)
   }
 
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      })
+      
+      const chunks: Blob[] = []
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data)
+        }
+      }
+      
+      recorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: 'audio/webm;codecs=opus' })
+        const reader = new FileReader()
+        reader.onloadend = async () => {
+          const base64String = reader.result as string
+          const base64 = base64String.split(',')[1] || base64String
+          
+          try {
+            // Enviar audio al backend para transcripción
+            const response = await fetch(`${getBackendUrl()}/api/transcribe`, {
+              method: 'POST',
+              headers: getAuthHeaders(),
+              body: JSON.stringify({
+                audio_data: base64,
+                audio_format: 'webm',
+                language: 'es'
+              })
+            })
+            
+            if (response.ok) {
+              const data = await response.json()
+              if (data.success && data.text) {
+                setInput(data.text)
+              } else {
+                console.error('Error en transcripción:', data.error)
+                alert('Error al transcribir el audio. Por favor intenta de nuevo.')
+              }
+            } else {
+              throw new Error('Error al transcribir audio')
+            }
+          } catch (error) {
+            console.error('Error enviando audio:', error)
+            alert('Error al transcribir el audio. Por favor intenta de nuevo.')
+          }
+        }
+        reader.readAsDataURL(blob)
+        
+        // Detener el stream
+        stream.getTracks().forEach(track => track.stop())
+      }
+      
+      recorder.start()
+      setMediaRecorder(recorder)
+      setIsRecording(true)
+    } catch (error) {
+      console.error('Error iniciando grabación:', error)
+      alert('No se pudo acceder al micrófono. Por favor verifica los permisos.')
+    }
+  }
+
+  const handleStopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop()
+      setIsRecording(false)
+      setMediaRecorder(null)
+    }
+  }
+
   const handleSendMessage = async () => {
     if (!input.trim() && !selectedImage) return
     if (isLoading) return
@@ -245,6 +320,9 @@ function ChatPageContent() {
         } catch (e) { console.error(e) }
       }
 
+      // Agregar mensaje de "Quetzalia está pensando"
+      setMessages((prev) => [...prev, { role: "assistant", text: "" }])
+
       // Llamar al backend (la autenticación ya se verifica en ProtectedRoute)
       const response = await fetch(`${getBackendUrl()}/api/chat`, {
         method: 'POST',
@@ -255,7 +333,7 @@ function ChatPageContent() {
           image_format: 'jpeg',
           session_id: currentSession || undefined,
           user_id: userId || undefined,
-          stream: true, // Usar streaming para mejor UX
+          stream: false, // Sin streaming - recibir respuesta completa
         }),
       })
 
@@ -263,74 +341,40 @@ function ChatPageContent() {
         throw new Error('Error al enviar mensaje')
       }
 
-      // Leer stream - usando el mismo patrón que funciona en Quetzalia
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let assistantMessage = ""
-      let buffer = ""
+      // Recibir respuesta completa sin streaming
+      const data = await response.json()
+      const assistantMessage = data.response || data.analysis || ''
 
-      // Agregar mensaje vacío del asistente
-      setMessages((prev) => [...prev, { role: "assistant", text: "" }])
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          
-          if (done) break
-
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split("\n")
-          buffer = lines.pop() || ""
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const dataStr = line.slice(6)
-              
-              if (dataStr.trim() === "[DONE]") {
-                continue
-              }
-
-              try {
-                const data = JSON.parse(dataStr)
-                
-                if (data.done) {
-                  // Stream terminado
-                  // Recargar conversaciones después de enviar mensaje
-                  fetchConversations()
-                  break
-                }
-
-                if (data.content) {
-                  // Si el contenido viene procesado (con tablas convertidas a HTML), reemplazar todo
-                  if (data.processed) {
-                    assistantMessage = data.content
-                  } else {
-                    assistantMessage += data.content
-                  }
-                  // Actualizar el último mensaje (asistente)
-                  setMessages((prev) => {
-                    const newMessages = [...prev]
-                    newMessages[newMessages.length - 1] = {
-                      role: "assistant",
-                      text: assistantMessage,
-                    }
-                    return newMessages
-                  })
-                }
-              } catch (e) {
-                // Ignorar errores de parsing
-                console.warn("Error parsing SSE data:", e)
-              }
-            }
-          }
+      // Actualizar el mensaje del asistente con la respuesta completa
+      setMessages((prev) => {
+        const newMessages = [...prev]
+        newMessages[newMessages.length - 1] = {
+          role: "assistant",
+          text: assistantMessage,
         }
-      }
+        return newMessages
+      })
+
+      // Recargar conversaciones después de enviar mensaje
+      fetchConversations()
     } catch (error) {
       console.error('Error:', error)
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        text: 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.'
-      }])
+      // Actualizar el mensaje vacío del asistente con el error
+      setMessages((prev) => {
+        const newMessages = [...prev]
+        if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'assistant' && !newMessages[newMessages.length - 1].text) {
+          newMessages[newMessages.length - 1] = {
+            role: 'assistant',
+            text: 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.'
+          }
+        } else {
+          newMessages.push({
+            role: 'assistant',
+            text: 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.'
+          })
+        }
+        return newMessages
+      })
     } finally {
       setIsLoading(false)
     }
@@ -374,7 +418,7 @@ function ChatPageContent() {
   }
 
   return (
-    <div className="min-h-screen h-full flex bg-gray-50">
+    <div className="h-screen flex bg-gray-50 overflow-hidden">
       {/* Left Sidebar (desktop) */}
       <div className="hidden md:flex w-80 bg-white border-r border-gray-200 flex-col">
         {/* Header */}
@@ -424,7 +468,40 @@ function ChatPageContent() {
             {conversations.map((c) => (
               <div key={c.id} className={`w-full px-3 py-2 rounded hover:bg-gray-100 ${sessionId===c.id?'bg-gray-100':''}`}>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setSessionId(c.id)} className="flex-1 text-left">
+                  <button onClick={async () => {
+                    setSessionId(c.id)
+                    // Limpiar mensajes actuales antes de cargar
+                    setMessages([])
+                    // Cargar mensajes de la conversación
+                    try {
+                      const res = await fetch(`${getBackendUrl()}/api/history?session_id=${c.id}&user_id=${userId}`, {
+                        headers: getAuthHeaders()
+                      })
+                      if (res.ok) {
+                        const data = await res.json()
+                        // Filtrar mensajes vacíos y duplicados
+                        const historyMessages: Message[] = (data.messages || [])
+                          .filter((m: any) => m.content && m.content.trim()) // Filtrar mensajes vacíos
+                          .map((m: any) => ({
+                            role: m.role === 'assistant' ? 'assistant' : 'user',
+                            text: m.content || ''
+                          }))
+                        // Eliminar duplicados consecutivos (mismo rol y mismo contenido)
+                        const uniqueMessages: Message[] = []
+                        for (let i = 0; i < historyMessages.length; i++) {
+                          const current = historyMessages[i]
+                          const previous = uniqueMessages[uniqueMessages.length - 1]
+                          // Solo agregar si es diferente al anterior (rol o contenido)
+                          if (!previous || previous.role !== current.role || previous.text !== current.text) {
+                            uniqueMessages.push(current)
+                          }
+                        }
+                        setMessages(uniqueMessages)
+                      }
+                    } catch (e) {
+                      console.error('Error cargando conversación:', e)
+                    }
+                  }} className="flex-1 text-left">
                     <div className="text-sm text-gray-900">{c.title || 'Conversación'}</div>
                     <div className="text-xs text-gray-500">{new Date((c.updated_at||0)*1000).toLocaleString()}</div>
                   </button>
@@ -554,7 +631,7 @@ function ChatPageContent() {
         </div>
 
         {/* Chat Messages Area - Fixed Scroll */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 min-h-0">
           {messages.length === 0 ? (
             <>
               <div className="flex flex-col items-center justify-center h-full">
@@ -565,7 +642,7 @@ function ChatPageContent() {
               </div>
             </>
           ) : (
-            <div className="w-full max-w-3xl md:max-w-4xl mx-auto space-y-3 sm:space-y-4">
+            <div className="w-full max-w-3xl md:max-w-4xl mx-auto space-y-3 sm:space-y-4 overflow-x-hidden pb-4">
               {messages.length > 0 && messages.map((msg, idx) => (
                 <div key={idx} className="flex gap-2 sm:gap-3">
                   <div className={`flex-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
@@ -573,12 +650,17 @@ function ChatPageContent() {
                       msg.role === 'user' ? 'bg-[#068959] text-white' : 'bg-gray-100 text-gray-900'
                     }`}>
                       {msg.role === 'assistant' ? (
-                        <div className="max-w-none leading-relaxed markdown-content">
-                          {/* Detectar si el contenido contiene HTML procesado (tablas del backend) */}
-                          {msg.text.includes('<table') || msg.text.includes('<div class="overflow-x-auto') || msg.text.includes('<thead') ? (
+                        <div className="max-w-full leading-relaxed markdown-content overflow-x-hidden">
+                          {/* Mostrar animación "Quetzalia está pensando" si el mensaje está vacío y está cargando */}
+                          {!msg.text && isLoading ? (
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Spinner className="w-4 h-4" />
+                              <span className="text-sm italic">Quetzalia está pensando...</span>
+                            </div>
+                          ) : msg.text.includes('<table') || msg.text.includes('<div class="overflow-x-auto') || msg.text.includes('<thead') ? (
                             <div 
                               dangerouslySetInnerHTML={{ __html: msg.text }}
-                              className="max-w-none"
+                              className="max-w-full overflow-x-auto"
                             />
                           ) : (
                             <ReactMarkdown
@@ -656,8 +738,8 @@ function ChatPageContent() {
                                 ),
                                 // Estilos para tablas
                                 table: ({ children, ...props }: any) => (
-                                  <div className="overflow-x-auto my-4 w-full">
-                                    <table className="min-w-full border-collapse border border-gray-300 bg-white table-auto" {...props}>
+                                  <div className="overflow-x-auto my-4 w-full max-w-full">
+                                    <table className="min-w-full border-collapse border border-gray-300 bg-white table-auto max-w-full" {...props}>
                                       {children}
                                     </table>
                                   </div>
@@ -694,9 +776,6 @@ function ChatPageContent() {
                             >
                               {normalizeMarkdown(msg.text)}
                             </ReactMarkdown>
-                          )}
-                          {idx === messages.length - 1 && isLoading && (
-                            <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse" />
                           )}
                         </div>
                       ) : (
@@ -748,12 +827,32 @@ function ChatPageContent() {
                   className="hidden"
                   disabled={isLoading}
                 />
+                <button
+                  onClick={isRecording ? handleStopRecording : handleStartRecording}
+                  disabled={isLoading}
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-colors ${
+                    isRecording 
+                      ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
+                      : 'text-gray-400 hover:text-[#068959]'
+                  }`}
+                  title={isRecording ? 'Detener grabación' : 'Grabar audio'}
+                >
+                  {isRecording ? (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <rect x="6" y="6" width="12" height="12" rx="2" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                  )}
+                </button>
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="¿Qué tienes en mente?..."
+                  placeholder="Escribe tu mensaje o graba un audio..."
                   className="flex-1 bg-transparent outline-none text-gray-900 placeholder-gray-400 text-sm sm:text-base"
                   disabled={isLoading}
                 />

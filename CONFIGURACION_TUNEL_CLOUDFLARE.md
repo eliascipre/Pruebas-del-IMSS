@@ -75,3 +75,5 @@ NEXT_PUBLIC_CHATBOT_URL=https://size-ensures-preparing-nikon.trycloudflare.com
 El frontend usará esta URL para todas las peticiones al backend, y Cloudflare enrutará internamente al puerto 5001.
 
 
+
+

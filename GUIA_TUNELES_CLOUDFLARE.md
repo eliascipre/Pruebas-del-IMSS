@@ -270,3 +270,5 @@ pnpm dev
 4. ✅ **Peticiones**: El frontend usa la URL del backend desde `.env.local`
 
 
+
+

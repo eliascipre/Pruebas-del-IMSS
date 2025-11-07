@@ -20,6 +20,7 @@ from memory_manager import get_memory_manager
 from media_storage import media_storage
 from langchain_system import get_medical_chain
 from medical_analysis import analyze_image_with_fallback
+from transcription_service import transcribe_audio
 from auth_manager import get_auth_manager
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends, Header
@@ -115,6 +116,12 @@ class ImageAnalysisRequest(BaseModel):
     prompt: str = "Analiza esta imagen médica del IMSS"
     session_id: Optional[str] = None
     user_id: Optional[str] = None
+
+
+class TranscriptionRequest(BaseModel):
+    audio_data: str
+    audio_format: str = "webm"
+    language: Optional[str] = "es"
 
 
 class ChatResponse(BaseModel):
@@ -342,7 +349,8 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
                 headers={
                     'Cache-Control': 'no-cache',
                     'Connection': 'keep-alive',
-                    'X-Accel-Buffering': 'no'
+                    'X-Accel-Buffering': 'no',
+                    'Content-Type': 'text/event-stream; charset=utf-8'
                 }
             )
         else:
@@ -446,42 +454,89 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
 
 
 async def process_text_stream(message: str, session_id: str):
-    """Procesar texto con streaming"""
+    """
+    Procesar texto con streaming usando Server-Sent Events (SSE)
+    
+    Formato SSE personalizado:
+    - Cada chunk: data: {"content": "texto del chunk", "done": false}\n\n
+    - Finalización: data: {"content": "", "done": true, "session_id": "..."}\n\n
+    - Error: data: {"error": "mensaje de error"}\n\n
+    
+    El frontend debe:
+    1. Leer el stream línea por línea
+    2. Buscar líneas que empiecen con "data: "
+    3. Parsear el JSON después de "data: "
+    4. Acumular content hasta recibir done: true
+    5. Manejar errores si viene el campo "error"
+    """
     try:
         full_response = ""
         start_ts = int(time.time() * 1000)
-        async for chunk in medical_chain.stream_chat(message, session_id):
-            full_response += chunk
-            yield f"data: {json.dumps({'content': chunk, 'done': False})}\n\n"
+        chunk_count = 0
+        
+        logger.info(f"🔄 Iniciando streaming para sesión {session_id[:8]}...")
+        
+        # Stream chunks desde LangChain
+        try:
+            async for chunk in medical_chain.stream_chat(message, session_id):
+                if chunk:
+                    chunk_count += 1
+                    # Asegurar que el chunk sea string y esté en UTF-8
+                    chunk_str = str(chunk) if not isinstance(chunk, str) else chunk
+                    full_response += chunk_str
+                    
+                    # Enviar chunk como SSE con encoding UTF-8
+                    # Formato: data: {"content": "chunk", "done": false}\n\n
+                    chunk_data = json.dumps({'content': chunk_str, 'done': False}, ensure_ascii=False)
+                    yield f"data: {chunk_data}\n\n"
+        except Exception as stream_err:
+            logger.error(f"❌ Error en stream_chat: {stream_err}", exc_info=True)
+            error_data = json.dumps({'error': f'Error en generación: {str(stream_err)}'}, ensure_ascii=False)
+            yield f"data: {error_data}\n\n"
+            return
+        
+        logger.info(f"✅ Streaming completado: {chunk_count} chunks, {len(full_response)} caracteres totales")
         
         # Persistir respuesta completa al finalizar el stream
         try:
             memory_manager.add_message_to_conversation(session_id, "assistant", full_response, {"stream": True})
-        except Exception as _e:
-            logger.warning(f"⚠️ No se pudo persistir respuesta del asistente (stream): {_e}")
+            logger.debug(f"💾 Respuesta persistida para sesión {session_id[:8]}")
+        except Exception as persist_err:
+            logger.error(f"❌ Error persistiendo respuesta: {persist_err}", exc_info=True)
+            logger.warning(f"⚠️ No se pudo persistir respuesta del asistente (stream): {persist_err}")
+        
         # Métricas
         try:
             end_ts = int(time.time() * 1000)
+            duration_ms = end_ts - start_ts
             memory_manager.log_chat_metrics(
                 session_id=session_id,
                 input_chars=len(message or ''),
                 output_chars=len(full_response or ''),
                 started_at=start_ts,
                 ended_at=end_ts,
-                duration_ms=end_ts - start_ts,
-                model='google/medgemma-27b-it',
+                duration_ms=duration_ms,
+                model='google/medgemma-27b',
                 provider='vllm',
                 stream=True,
                 is_image=False,
                 success=True,
             )
-        except Exception as _e:
-            logger.warning(f"⚠️ No se pudieron registrar métricas (stream): {_e}")
+            logger.debug(f"📊 Métricas registradas: {duration_ms}ms, {len(full_response)} chars")
+        except Exception as metrics_err:
+            logger.error(f"❌ Error registrando métricas: {metrics_err}", exc_info=True)
+            logger.warning(f"⚠️ No se pudieron registrar métricas (stream): {metrics_err}")
 
-        yield f"data: {json.dumps({'content': '', 'done': True, 'session_id': session_id})}\n\n"
+        # Enviar señal de finalización
+        # Formato: data: {"content": "", "done": true, "session_id": "..."}\n\n
+        final_data = json.dumps({'content': '', 'done': True, 'session_id': session_id}, ensure_ascii=False)
+        yield f"data: {final_data}\n\n"
+        
     except Exception as e:
-        logger.error(f"❌ Error en streaming de texto: {e}")
-        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        logger.error(f"❌ Error crítico en streaming de texto: {e}", exc_info=True)
+        logger.error(f"📋 Tipo de error: {type(e).__name__}")
+        error_data = json.dumps({'error': str(e)}, ensure_ascii=False)
+        yield f"data: {error_data}\n\n"
 
 
 async def process_image_stream(message: str, image_data: str, session_id: str):
@@ -529,6 +584,34 @@ async def image_analysis_endpoint(req: ImageAnalysisRequest):
         raise
     except Exception as e:
         logger.error(f"❌ Error en análisis de imagen: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/transcribe")
+async def transcribe_endpoint(req: TranscriptionRequest, user: Dict[str, Any] = Depends(require_auth)):
+    """Endpoint para transcribir audio usando Whisper"""
+    try:
+        logger.info(f"🎤 Transcribiendo audio - User: {user.get('email')}, Formato: {req.audio_format}")
+        
+        # Transcribir audio
+        transcription_result = transcribe_audio(
+            req.audio_data,
+            req.audio_format,
+            req.language
+        )
+        
+        if not transcription_result.get('success'):
+            raise HTTPException(status_code=500, detail=transcription_result.get('error', 'Error en transcripción'))
+        
+        return {
+            "success": True,
+            "text": transcription_result.get('text', ''),
+            "language": transcription_result.get('language', 'es')
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error en transcripción: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

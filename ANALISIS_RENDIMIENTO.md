@@ -190,3 +190,5 @@ function isTokenCached(): boolean {
 6. **Fase 6 (Bajo)**: Optimizaciones frontend
 
 
+
+
