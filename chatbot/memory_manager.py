@@ -394,6 +394,40 @@ class MemoryManager:
             logger.error(f"❌ Error eliminando conversaciones: {e}")
             return 0
 
+    def delete_conversation(self, session_id: str, user_id: str) -> bool:
+        """Eliminar una conversación individual y sus mensajes asociados"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Verificar que la conversación pertenece al usuario
+            cursor.execute(
+                "SELECT id FROM conversations WHERE id = ? AND user_id = ?",
+                (session_id, user_id)
+            )
+            if not cursor.fetchone():
+                conn.close()
+                return False
+            
+            # Borrar mensajes de la sesión
+            cursor.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+            
+            # Borrar memorias de la sesión
+            cursor.execute("DELETE FROM conversation_memory WHERE session_id = ?", (session_id,))
+            
+            # Borrar métricas de la sesión
+            cursor.execute("DELETE FROM metrics WHERE session_id = ?", (session_id,))
+            
+            # Borrar la conversación
+            cursor.execute("DELETE FROM conversations WHERE id = ?", (session_id,))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            logger.error(f"❌ Error eliminando conversación {session_id}: {e}")
+            return False
+
     def ensure_conversation(self, user_id: str, session_id: str, title: str = "Nueva conversación"):
         """Asegurar que la conversación exista y pertenezca al usuario."""
         try:

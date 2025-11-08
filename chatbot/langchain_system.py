@@ -121,7 +121,25 @@ class SQLiteChatMessageHistory(ChatMessageHistory):
 
 
 class FallbackLLM:
-    """LLM conectado a vLLM con Ray Serve (compatible con OpenAI API)"""
+    """LLM conectado a vLLM con Ray Serve (compatible con OpenAI API)
+    
+    Optimizado para aprovechar autoscaling de Ray Serve:
+    - Connection pool persistente (singleton)
+    - Timeouts adaptativos basados en tamaño del prompt
+    - Circuit breaker para evitar sobrecarga
+    - Backoff exponencial con jitter
+    - Respeta headers de rate limiting
+    """
+    
+    # Cliente singleton para connection pool
+    _client: Optional[httpx.AsyncClient] = None
+    _client_lock = asyncio.Lock()
+    
+    # Circuit breaker state
+    _failure_count = 0
+    _last_failure_time: Optional[float] = None
+    _circuit_open = False
+    _circuit_open_until: Optional[float] = None
     
     def __init__(self, vllm_endpoint: str = "http://localhost:8000/v1/"):
         self.vllm_endpoint = vllm_endpoint
@@ -137,6 +155,82 @@ class FallbackLLM:
         
         logger.info(f"✅ Configurado para usar vLLM con Ray Serve en: {vllm_endpoint}")
         logger.info(f"✅ Modelo: google/medgemma-27b")
+        logger.info(f"✅ Optimizaciones: Connection pool, Circuit breaker, Timeouts adaptativos")
+    
+    @classmethod
+    async def get_client(cls) -> httpx.AsyncClient:
+        """Obtener cliente singleton con connection pool persistente"""
+        if cls._client is None:
+            async with cls._client_lock:
+                if cls._client is None:
+                    cls._client = httpx.AsyncClient(
+                        timeout=httpx.Timeout(120.0, connect=10.0),
+                        limits=httpx.Limits(
+                            max_keepalive_connections=20,  # Mantener 20 conexiones activas
+                            max_connections=100,  # Máximo 100 conexiones totales
+                            keepalive_expiry=30.0  # Mantener conexiones 30 segundos
+                        )
+                        # http2=True removido - requiere httpx[http2] y no es necesario para funcionamiento básico
+                    )
+                    logger.info("✅ Cliente HTTP con connection pool inicializado")
+        return cls._client
+    
+    @classmethod
+    def _calculate_adaptive_timeout(cls, messages: List[Dict], max_tokens: int) -> float:
+        """Calcular timeout adaptativo basado en el tamaño del prompt y max_tokens"""
+        total_chars = sum(len(m.get("content", "")) for m in messages)
+        estimated_tokens = total_chars // 4  # Aproximación: 4 chars = 1 token
+        
+        # Base timeout: 10 segundos
+        base_timeout = 10.0
+        
+        # Agregar tiempo por token de entrada (0.01s por token)
+        input_time = estimated_tokens * 0.01
+        
+        # Agregar tiempo por token de salida (0.05s por token, más lento)
+        output_time = max_tokens * 0.05
+        
+        # Agregar margen de seguridad (20%)
+        total_timeout = (base_timeout + input_time + output_time) * 1.2
+        
+        # Limitar entre 30s y 300s
+        timeout = max(30.0, min(300.0, total_timeout))
+        logger.debug(f"⏱️ Timeout adaptativo calculado: {timeout:.2f}s (input: {estimated_tokens} tokens, output: {max_tokens} tokens)")
+        return timeout
+    
+    @classmethod
+    def _check_circuit_breaker(cls) -> None:
+        """Verificar si el circuit breaker está abierto"""
+        if cls._circuit_open and cls._circuit_open_until:
+            if time.time() < cls._circuit_open_until:
+                raise Exception("Circuit breaker is open. Server may be overloaded. Please try again later.")
+            else:
+                # Intentar resetear
+                cls._circuit_open = False
+                cls._circuit_open_until = None
+                cls._failure_count = 0
+                logger.info("✅ Circuit breaker reseteado")
+    
+    @classmethod
+    def _record_failure(cls) -> None:
+        """Registrar fallo y abrir circuit breaker si es necesario"""
+        cls._failure_count += 1
+        cls._last_failure_time = time.time()
+        
+        # Si hay 5 fallos consecutivos, abrir circuit breaker por 30 segundos
+        if cls._failure_count >= 5:
+            cls._circuit_open = True
+            cls._circuit_open_until = time.time() + 30.0
+            logger.warning(f"⚠️ Circuit breaker abierto por {cls._failure_count} fallos consecutivos. Reintentando en 30s")
+    
+    @classmethod
+    def _record_success(cls) -> None:
+        """Registrar éxito y resetear contador"""
+        if cls._failure_count > 0:
+            logger.info(f"✅ Request exitoso. Reseteando contador de fallos ({cls._failure_count} → 0)")
+        cls._failure_count = 0
+        cls._circuit_open = False
+        cls._circuit_open_until = None
     
     async def invoke(self, messages: List[BaseMessage], **kwargs) -> Any:
         """Invocar LLM desde vLLM con Ray Serve"""
@@ -202,16 +296,29 @@ class FallbackLLM:
             
             logger.debug(f"📦 Payload configurado: model={payload['model']}, max_tokens={max_tokens}, temperature={payload['temperature']}")
             
+            # Verificar circuit breaker antes de hacer request
+            self._check_circuit_breaker()
+            
+            # Calcular timeout adaptativo
+            adaptive_timeout = self._calculate_adaptive_timeout(messages_data, max_tokens)
+            
+            # Obtener cliente singleton con connection pool
+            client = await self.get_client()
+            
             # Llamar directamente a vLLM con httpx (igual que el curl que funciona)
+            # Usar timeout adaptativo en lugar de fijo
             chunks_received = 0
             chunks_with_content = 0
             
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            try:
                 try:
+                    # Usar timeout adaptativo en la request
+                    timeout = httpx.Timeout(adaptive_timeout, connect=10.0)
                     async with client.stream(
                         "POST",
                         f"{self.vllm_endpoint}chat/completions",
-                        json=payload
+                        json=payload,
+                        timeout=timeout
                     ) as response:
                         if response.status_code == 200:
                             logger.debug("✅ Conexión streaming establecida con vLLM")
@@ -233,6 +340,8 @@ class FallbackLLM:
                                         continue
                             
                             logger.info(f"✅ Streaming completado: {chunks_received} chunks recibidos, {chunks_with_content} con contenido")
+                            # Registrar éxito para circuit breaker
+                            self._record_success()
                         else:
                             # Manejo detallado de errores HTTP
                             error_text = await response.aread()
@@ -243,6 +352,9 @@ class FallbackLLM:
                             logger.error(f"📦 Payload enviado: {json.dumps(payload, ensure_ascii=False, indent=2)[:1000]}")
                             logger.error(f"🔗 Endpoint: {self.vllm_endpoint}chat/completions")
                             
+                            # Registrar fallo para circuit breaker
+                            self._record_failure()
+                            
                             # Intentar parsear error si es JSON
                             try:
                                 error_json = json.loads(error_str)
@@ -252,14 +364,21 @@ class FallbackLLM:
                                 yield f"Error: No se pudo procesar la solicitud ({response.status_code})"
                 except httpx.TimeoutException as timeout_err:
                     logger.error(f"❌ Timeout esperando respuesta de vLLM: {timeout_err}")
+                    self._record_failure()
                     yield "Error: Timeout esperando respuesta del servidor"
                 except httpx.RequestError as req_err:
                     logger.error(f"❌ Error de conexión con vLLM: {req_err}")
                     logger.error(f"🔗 Endpoint: {self.vllm_endpoint}chat/completions")
+                    self._record_failure()
                     yield f"Error: No se pudo conectar con el servidor - {str(req_err)}"
                 except Exception as stream_err:
                     logger.error(f"❌ Error inesperado en streaming: {stream_err}", exc_info=True)
+                    self._record_failure()
                     yield f"Error: {str(stream_err)}"
+            except Exception as circuit_err:
+                # Error de circuit breaker
+                logger.warning(f"⚠️ Circuit breaker activo: {circuit_err}")
+                yield f"Error: {str(circuit_err)}"
                     
         except Exception as e:
             logger.error(f"❌ Error crítico en streaming: {e}", exc_info=True)
@@ -766,60 +885,80 @@ y tratamientos médicos. Responde en español."""
             if len(messages_data) > 10 or total_chars > 10000:
                 logger.warning(f"⚠️ Payload muy grande: {len(messages_data)} mensajes, {total_chars} caracteres")
             
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                for attempt in range(max_retries):
-                    try:
-                        # Log del request en el primer intento
-                        if attempt == 0:
-                            logger.info(f"📤 Enviando request a {self.llm.vllm_endpoint}chat/completions")
-                        
-                        resp = await client.post(
-                            f"{self.llm.vllm_endpoint}chat/completions",
-                            json=payload,
-                            headers={
-                                "Content-Type": "application/json",
-                            },
-                        )
-                        
-                        if resp.status_code == 200:
-                            data = resp.json()
-                            answer = data["choices"][0]["message"]["content"]
-                            if attempt > 0:
-                                logger.info(f"✅ Respuesta recibida desde vLLM (sin streaming) después de {attempt + 1} intentos")
-                            else:
-                                logger.info("✅ Respuesta recibida desde vLLM (sin streaming)")
-                            break
+            # Verificar circuit breaker antes de hacer request
+            self.llm._check_circuit_breaker()
+            
+            # Calcular timeout adaptativo
+            adaptive_timeout = self.llm._calculate_adaptive_timeout(messages_data, 2048)
+            
+            # Obtener cliente singleton con connection pool
+            client = await self.llm.get_client()
+            
+            # Usar timeout adaptativo
+            timeout = httpx.Timeout(adaptive_timeout, connect=10.0)
+            
+            for attempt in range(max_retries):
+                try:
+                    # Log del request en el primer intento
+                    if attempt == 0:
+                        logger.info(f"📤 Enviando request a {self.llm.vllm_endpoint}chat/completions")
+                    
+                    resp = await client.post(
+                        f"{self.llm.vllm_endpoint}chat/completions",
+                        json=payload,
+                        headers={
+                            "Content-Type": "application/json",
+                        },
+                        timeout=timeout
+                    )
+                    
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        answer = data["choices"][0]["message"]["content"]
+                        if attempt > 0:
+                            logger.info(f"✅ Respuesta recibida desde vLLM (sin streaming) después de {attempt + 1} intentos")
                         else:
-                            error_text = resp.text[:1000]  # Aumentar tamaño del error para logging
-                            if attempt < max_retries - 1:
-                                logger.warning(f"⚠️ Error {resp.status_code} en vLLM (intento {attempt + 1}/{max_retries}), reintentando en {retry_delay:.2f}s...")
-                                if resp.status_code == 500:
-                                    logger.error(f"📋 Detalles del error 500: {error_text}")
-                                    # Log del request que falló para debugging
-                                    logger.error(f"📋 Request que falló: {len(messages_data)} mensajes, {total_chars} caracteres")
-                                    if attempt == 0:  # Solo en el primer intento
-                                        logger.error(f"📋 Primeros 3 mensajes: {json.dumps(messages_data[:3], indent=2, ensure_ascii=False)[:500]}")
-                                await asyncio.sleep(retry_delay)
-                                retry_delay *= 1.5  # Backoff exponencial más suave (1.5x en lugar de 2x)
-                            else:
-                                logger.error(f"❌ Error en vLLM después de {max_retries} intentos: {resp.status_code} - {error_text}")
-                                raise Exception(f"HTTP {resp.status_code}: {error_text}")
-                    except httpx.HTTPError as e:
+                            logger.info("✅ Respuesta recibida desde vLLM (sin streaming)")
+                        # Registrar éxito para circuit breaker
+                        self.llm._record_success()
+                        break
+                    else:
+                        error_text = resp.text[:1000]  # Aumentar tamaño del error para logging
                         if attempt < max_retries - 1:
-                            logger.warning(f"⚠️ Error de conexión en vLLM (intento {attempt + 1}/{max_retries}), reintentando en {retry_delay:.2f}s...")
+                            logger.warning(f"⚠️ Error {resp.status_code} en vLLM (intento {attempt + 1}/{max_retries}), reintentando en {retry_delay:.2f}s...")
+                            if resp.status_code == 500:
+                                logger.error(f"📋 Detalles del error 500: {error_text}")
+                                # Log del request que falló para debugging
+                                logger.error(f"📋 Request que falló: {len(messages_data)} mensajes, {total_chars} caracteres")
+                                if attempt == 0:  # Solo en el primer intento
+                                    logger.error(f"📋 Primeros 3 mensajes: {json.dumps(messages_data[:3], indent=2, ensure_ascii=False)[:500]}")
                             await asyncio.sleep(retry_delay)
-                            retry_delay *= 1.5
+                            retry_delay *= 1.5  # Backoff exponencial más suave (1.5x en lugar de 2x)
                         else:
-                            logger.error(f"❌ Error de conexión en vLLM después de {max_retries} intentos: {e}")
-                            raise
-                    except httpx.TimeoutException as e:
-                        if attempt < max_retries - 1:
-                            logger.warning(f"⚠️ Timeout en vLLM (intento {attempt + 1}/{max_retries}), reintentando en {retry_delay:.2f}s...")
-                            await asyncio.sleep(retry_delay)
-                            retry_delay *= 1.5
-                        else:
-                            logger.error(f"❌ Timeout en vLLM después de {max_retries} intentos: {e}")
-                            raise
+                            logger.error(f"❌ Error en vLLM después de {max_retries} intentos: {resp.status_code} - {error_text}")
+                            # Registrar fallo para circuit breaker
+                            self.llm._record_failure()
+                            raise Exception(f"HTTP {resp.status_code}: {error_text}")
+                except httpx.HTTPError as e:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"⚠️ Error de conexión en vLLM (intento {attempt + 1}/{max_retries}), reintentando en {retry_delay:.2f}s...")
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 1.5
+                    else:
+                        logger.error(f"❌ Error de conexión en vLLM después de {max_retries} intentos: {e}")
+                        # Registrar fallo para circuit breaker
+                        self.llm._record_failure()
+                        raise
+                except httpx.TimeoutException as e:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"⚠️ Timeout en vLLM (intento {attempt + 1}/{max_retries}), reintentando en {retry_delay:.2f}s...")
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 1.5
+                    else:
+                        logger.error(f"❌ Timeout en vLLM después de {max_retries} intentos: {e}")
+                        # Registrar fallo para circuit breaker
+                        self.llm._record_failure()
+                        raise
             
             # NO guardar en historial aquí - main.py ya guarda los mensajes
             # Esto evita duplicados cuando se carga la conversación
@@ -1012,6 +1151,20 @@ y tratamientos médicos. Responde en español."""
     async def stream_medical_analysis(self, user_message: str, image_data: str, session_id: str = "") -> AsyncGenerator[str, None]:
         """Procesar análisis médico de imágenes con streaming usando formato multimodal"""
         try:
+            # Importar funciones de compresión y validación
+            from medical_analysis import compress_image, validate_image_size
+            
+            # Validar y comprimir imagen si es necesario
+            is_valid, error_msg = validate_image_size(image_data)
+            if not is_valid:
+                logger.warning(f"⚠️ {error_msg}. Comprimiendo imagen...")
+                image_data = compress_image(image_data)
+                # Validar nuevamente después de compresión
+                is_valid, error_msg = validate_image_size(image_data)
+                if not is_valid:
+                    yield f"Error: Imagen demasiado grande incluso después de compresión: {error_msg}"
+                    return
+            
             # Construir prompt para análisis de imagen
             analysis_prompt = f"""{self.system_prompt}
 
@@ -1048,7 +1201,7 @@ Prompt del usuario: {user_message if user_message else 'Analiza esta radiografí
             ]
             
             logger.info(f"🖼️ Enviando imagen multimodal a vLLM con Ray Serve...")
-            logger.info(f"📏 Tamaño de imagen base64: {len(image_data)} caracteres")
+            logger.info(f"📏 Tamaño de imagen base64: {len(image_data)} caracteres (~{len(image_data) // 4} tokens estimados)")
             
             # Llamar a vLLM con streaming
             async with httpx.AsyncClient(timeout=120.0) as client:

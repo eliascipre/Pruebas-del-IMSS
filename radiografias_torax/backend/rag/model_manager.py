@@ -42,7 +42,15 @@ class ModelManager:
         Note: The main LLM is accessed via API and is NOT loaded here.
         """
         logger.info("--- Initializing RAG-specific Models (Embedder, NER) ---")
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        # Verificar si se fuerza CPU mediante variable de entorno
+        force_cpu = os.environ.get("FORCE_CPU", "").strip().lower() in ("1", "true", "t", "yes", "y", "si", "s")
+        
+        if force_cpu:
+            device = "cpu"
+            logger.info("FORCE_CPU=1 detectado, forzando uso de CPU para modelos RAG")
+        else:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info(f"Using device: {device} for RAG models")
 
         models = {}
@@ -93,10 +101,13 @@ class ModelManager:
             logger.info("Loading Stanza NER Pipeline...")
             # Usar tokenize + ner para evitar el procesador lemma que causa el error
             # El procesador tokenize es necesario antes de ner pero no requiere lemma
+            # Verificar si se fuerza CPU
+            force_cpu = os.environ.get("FORCE_CPU", "").strip().lower() in ("1", "true", "t", "yes", "y", "si", "s")
+            use_gpu = not force_cpu and torch.cuda.is_available()
             models['ner_pipeline'] = stanza.Pipeline(
                 lang="en",
                 processors={"tokenize": "default", "ner": "i2b2"},
-                use_gpu=torch.cuda.is_available(),
+                use_gpu=use_gpu,
                 verbose=False,
                 tokenize_no_ssplit=True,
             )

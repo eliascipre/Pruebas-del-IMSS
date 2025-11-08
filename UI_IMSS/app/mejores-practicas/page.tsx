@@ -2,15 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 import Link from "next/link"
 import ProtectedRoute from "@/components/auth/protected-route"
 
 function MejoresPracticasContent() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -24,44 +25,48 @@ function MejoresPracticasContent() {
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
-            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
-            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
-            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
-            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
-            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
-            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
+            <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Legal</Link>
+            <ThemeToggle />
           </nav>
-          {/* Menú móvil */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <button aria-label="Abrir menú" className="md:hidden text-gray-700 hover:text-[#068959] transition-colors">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 sm:w-80">
-              <nav className="mt-8 grid gap-4 text-base">
-                <Link href="/" className="text-gray-800 hover:text-[#068959]">Inicio</Link>
-                <Link href="/entornos" className="text-gray-800 hover:text-[#068959]">Entornos</Link>
-                <Link href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</Link>
-                <Link href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</Link>
-                <Link href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</Link>
-                <Link href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</Link>
-                <Link href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {/* Menú móvil */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <button aria-label="Abrir menú" className="md:hidden text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 sm:w-80 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                <nav className="mt-8 grid gap-4 text-base">
+                  <Link href="/" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Inicio</Link>
+                  <Link href="/entornos" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Entornos</Link>
+                  <Link href="/integraciones" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Integraciones</Link>
+                  <Link href="/mejores-practicas" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Mejores prácticas</Link>
+                  <Link href="/contacto" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Contacto</Link>
+                  <Link href="/soporte-tecnico" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Soporte técnico</Link>
+                  <Link href="/legal" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Legal</Link>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
       <main className="py-12 md:py-20">
         <div className="max-w-6xl mx-auto px-6">
-          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] dark:text-[#0dab70] mb-6">
             Mejores Prácticas
           </h1>
-          <p className="text-xl text-gray-600 mb-12">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-12">
             Guía para el uso responsable y efectivo de la IA en el ámbito médico
           </p>
           
@@ -69,9 +74,9 @@ function MejoresPracticasContent() {
             {/* Principio Fundamental */}
             <section className="bg-red-50 border-l-4 border-red-500 p-8 rounded-r-xl">
               <h2 className="text-2xl font-bold text-red-800 mb-4">⚠️ Principio Fundamental</h2>
-              <div className="bg-white p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">La IA como Herramienta de Soporte, no como Sustituto</h3>
-                <p className="text-gray-700 leading-relaxed mb-4">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">La IA como Herramienta de Soporte, no como Sustituto</h3>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
                   <strong>Fundamental:</strong> Los resultados generados por nuestra plataforma son para fines informativos 
                   y de soporte a la decisión. Nunca deben sustituir el juicio clínico de un radiólogo o médico calificado. 
                   Todo análisis, diagnóstico y plan de tratamiento debe ser verificado y finalizado por un profesional 
@@ -86,10 +91,10 @@ function MejoresPracticasContent() {
             </section>
 
             {/* Calidad de Entrada */}
-            <section className="bg-gray-50 p-8 rounded-xl">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">1. Calidad de la Entrada (GIGO: Garbage In, Garbage Out)</h2>
+            <section className="bg-gray-50 dark:bg-gray-800 p-8 rounded-xl">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">1. Calidad de la Entrada (GIGO: Garbage In, Garbage Out)</h2>
               <div className="space-y-4">
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                   La precisión de los modelos de IA, especialmente NV-Reason-CXR, depende directamente de la calidad 
                   de las imágenes de entrada. Recomendamos utilizar imágenes de radiografía en formatos JPG o PNG 
                   con una resolución y exposición adecuadas, siguiendo los protocolos de adquisición 
@@ -97,9 +102,9 @@ function MejoresPracticasContent() {
                 </p>
                 
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-white p-6 rounded-lg border">
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border dark:border-gray-700">
                     <h3 className="text-lg font-semibold text-green-700 mb-3">✅ Buenas Prácticas</h3>
-                    <ul className="space-y-2 text-gray-600">
+                    <ul className="space-y-2 text-gray-600 dark:text-gray-300">
                       <li>• Imágenes en formato JPG o PNG de alta calidad</li>
                       <li>• Resolución mínima de 1024x1024 píxeles</li>
                       <li>• Exposición adecuada sin sobre/sub-exposición</li>
@@ -108,9 +113,9 @@ function MejoresPracticasContent() {
                     </ul>
                   </div>
                   
-                  <div className="bg-white p-6 rounded-lg border">
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border dark:border-gray-700">
                     <h3 className="text-lg font-semibold text-red-700 mb-3">❌ Evitar</h3>
-                    <ul className="space-y-2 text-gray-600">
+                    <ul className="space-y-2 text-gray-600 dark:text-gray-300">
                       <li>• Imágenes de baja resolución</li>
                       <li>• Formatos comprimidos con pérdida</li>
                       <li>• Imágenes con artefactos significativos</li>
@@ -124,18 +129,18 @@ function MejoresPracticasContent() {
 
             {/* Ingeniería de Contexto */}
             <section className="bg-blue-50 p-8 rounded-xl">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">2. Ingeniería de Contexto (Prompting Clínico)</h2>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">2. Ingeniería de Contexto (Prompting Clínico)</h2>
               <div className="space-y-4">
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                   Nuestro sistema utiliza técnicas avanzadas de prompting (gestionadas a través de LangChain) 
                   para guiar a los modelos de IA. Sin embargo, proporcionar un contexto clínico claro (como la 
                   historia del paciente o la sospecha diagnóstica) junto con la imagen mejorará significativamente 
                   la relevancia y precisión de los hallazgos de la IA.
                 </p>
                 
-                <div className="bg-white p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Información Contextual Recomendada</h3>
-                  <ul className="grid md:grid-cols-2 gap-4 text-gray-600">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Información Contextual Recomendada</h3>
+                  <ul className="grid md:grid-cols-2 gap-4 text-gray-600 dark:text-gray-300">
                     <li>• Edad y sexo del paciente</li>
                     <li>• Síntomas principales</li>
                     <li>• Historia clínica relevante</li>
@@ -151,18 +156,18 @@ function MejoresPracticasContent() {
 
             {/* Revisión de Cadena de Pensamiento */}
             <section className="bg-green-50 p-8 rounded-xl">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">3. Revisión y Verificación de la "Cadena de Pensamiento"</h2>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">3. Revisión y Verificación de la "Cadena de Pensamiento"</h2>
               <div className="space-y-4">
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                   Una característica clave de nuestra integración con NV-Reason-CXR es la capacidad de revisar su 
                   razonamiento paso a paso. Alentamos a los usuarios a no solo leer el informe final, sino a revisar 
                   esta cadena de pensamiento para comprender cómo el modelo llegó a sus conclusiones, identificando 
                   posibles fallos o sesgos en el razonamiento.
                 </p>
                 
-                <div className="bg-white p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Proceso de Revisión Recomendado</h3>
-                  <ol className="space-y-3 text-gray-600">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Proceso de Revisión Recomendado</h3>
+                  <ol className="space-y-3 text-gray-600 dark:text-gray-300">
                     <li><strong>1. Análisis de Hallazgos:</strong> Revisar cada hallazgo identificado por la IA</li>
                     <li><strong>2. Evaluación de Evidencia:</strong> Verificar si la evidencia visual respalda las conclusiones</li>
                     <li><strong>3. Coherencia Clínica:</strong> Determinar si los hallazgos son clínicamente coherentes</li>
@@ -175,9 +180,9 @@ function MejoresPracticasContent() {
 
             {/* Ciclo de Retroalimentación */}
             <section className="bg-purple-50 p-8 rounded-xl">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">4. Ciclo de Retroalimentación Continua</h2>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">4. Ciclo de Retroalimentación Continua</h2>
               <div className="space-y-4">
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                   La IA médica mejora con la retroalimentación. Nuestra plataforma incluye herramientas para que 
                   los clínicos marquen análisis como "útiles", "parcialmente correctos" o "incorrectos". Esta 
                   retroalimentación es vital para auditar el rendimiento del modelo y mejorar nuestros sistemas 
@@ -185,22 +190,22 @@ function MejoresPracticasContent() {
                 </p>
                 
                 <div className="grid md:grid-cols-3 gap-6">
-                  <div className="bg-white p-6 rounded-lg text-center">
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-lg text-center">
                     <div className="text-3xl mb-3">✅</div>
-                    <h3 className="font-semibold text-green-700 mb-2">Útil</h3>
-                    <p className="text-sm text-gray-600">El análisis fue preciso y clínicamente relevante</p>
+                    <h3 className="font-semibold text-green-700 dark:text-green-400 mb-2">Útil</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">El análisis fue preciso y clínicamente relevante</p>
                   </div>
                   
-                  <div className="bg-white p-6 rounded-lg text-center">
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-lg text-center">
                     <div className="text-3xl mb-3">⚠️</div>
-                    <h3 className="font-semibold text-yellow-700 mb-2">Parcialmente Correcto</h3>
-                    <p className="text-sm text-gray-600">Algunos hallazgos fueron precisos, otros no</p>
+                    <h3 className="font-semibold text-yellow-700 dark:text-yellow-400 mb-2">Parcialmente Correcto</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Algunos hallazgos fueron precisos, otros no</p>
                   </div>
                   
-                  <div className="bg-white p-6 rounded-lg text-center">
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-lg text-center">
                     <div className="text-3xl mb-3">❌</div>
-                    <h3 className="font-semibold text-red-700 mb-2">Incorrecto</h3>
-                    <p className="text-sm text-gray-600">El análisis no fue clínicamente preciso</p>
+                    <h3 className="font-semibold text-red-700 dark:text-red-400 mb-2">Incorrecto</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">El análisis no fue clínicamente preciso</p>
                   </div>
                 </div>
               </div>
@@ -208,12 +213,12 @@ function MejoresPracticasContent() {
 
             {/* Consideraciones Éticas */}
             <section className="bg-gray-100 p-8 rounded-xl">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">5. Consideraciones Éticas y de Privacidad</h2>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">5. Consideraciones Éticas y de Privacidad</h2>
               <div className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-white p-6 rounded-lg">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Privacidad del Paciente</h3>
-                    <ul className="space-y-2 text-gray-600">
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Privacidad del Paciente</h3>
+                    <ul className="space-y-2 text-gray-600 dark:text-gray-300">
                       <li>• Anonimización de datos antes del procesamiento</li>
                       <li>• Cumplimiento con normativas HIPAA/LFPDPPP</li>
                       <li>• Cifrado de datos en tránsito y reposo</li>
@@ -221,9 +226,9 @@ function MejoresPracticasContent() {
                     </ul>
                   </div>
                   
-                  <div className="bg-white p-6 rounded-lg">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Transparencia</h3>
-                    <ul className="space-y-2 text-gray-600">
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Transparencia</h3>
+                    <ul className="space-y-2 text-gray-600 dark:text-gray-300">
                       <li>• Documentación clara de limitaciones</li>
                       <li>• Explicación del proceso de análisis</li>
                       <li>• Identificación de sesgos potenciales</li>
@@ -269,7 +274,7 @@ function MejoresPracticasContent() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-12 md:py-16 mt-20">
+      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12 md:py-16 mt-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <div className="space-y-4 sm:col-span-2 md:col-span-1">
@@ -280,7 +285,7 @@ function MejoresPracticasContent() {
                 height={60}
                 className="w-auto h-12 md:h-16"
               />
-              <p className="text-gray-600 text-sm">Inteligencia Artificial para la salud.</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Inteligencia Artificial para la salud.</p>
               <div className="flex items-center gap-4 pt-4">
                 <Link href="https://www.instagram.com/cipreholding/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -300,65 +305,65 @@ function MejoresPracticasContent() {
               </div>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Características</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Características</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] transition-colors">
+                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Características principales
                   </Link>
                 </li>
                 <li>
-                  <Link href="/experiencia-profesional" className="hover:text-[#068959] transition-colors">
+                  <Link href="/experiencia-profesional" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Experiencia profesional
                   </Link>
                 </li>
                 <li>
-                  <Link href="/integraciones" className="hover:text-[#068959] transition-colors">
+                  <Link href="/integraciones" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Integraciones
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Aprende más</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/blog" className="hover:text-[#068959] transition-colors">
+                  <Link href="/blog" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="/casos-de-estudio" className="hover:text-[#068959] transition-colors">
+                  <Link href="/casos-de-estudio" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Casos de estudio
                   </Link>
                 </li>
                 <li>
-                  <Link href="/historias-de-clientes" className="hover:text-[#068959] transition-colors">
+                  <Link href="/historias-de-clientes" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Historias de clientes
                   </Link>
                 </li>
                 <li>
-                  <Link href="/mejores-practicas" className="hover:text-[#068959] transition-colors">
+                  <Link href="/mejores-practicas" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Mejores prácticas
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Soporte</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/contacto" className="hover:text-[#068959] transition-colors">
+                  <Link href="/contacto" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Contacto
                   </Link>
                 </li>
                 <li>
-                  <Link href="/soporte-tecnico" className="hover:text-[#068959] transition-colors">
+                  <Link href="/soporte-tecnico" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Soporte técnico
                   </Link>
                 </li>
                 <li>
-                  <Link href="/legal" className="hover:text-[#068959] transition-colors">
+                  <Link href="/legal" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Legal
                   </Link>
                 </li>

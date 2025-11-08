@@ -2,14 +2,15 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 import Link from "next/link"
 
 export default function Blog() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -23,66 +24,70 @@ export default function Blog() {
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
-            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
-            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
-            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
-            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
-            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
-            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
+            <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Legal</Link>
+            <ThemeToggle />
           </nav>
-          {/* Menú móvil */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <button aria-label="Abrir menú" className="md:hidden text-gray-700 hover:text-[#068959] transition-colors">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 sm:w-80">
-              <nav className="mt-8 grid gap-4 text-base">
-                <Link href="/" className="text-gray-800 hover:text-[#068959]">Inicio</Link>
-                <Link href="/entornos" className="text-gray-800 hover:text-[#068959]">Entornos</Link>
-                <Link href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</Link>
-                <Link href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</Link>
-                <Link href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</Link>
-                <Link href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</Link>
-                <Link href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {/* Menú móvil */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <button aria-label="Abrir menú" className="md:hidden text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 sm:w-80 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                <nav className="mt-8 grid gap-4 text-base">
+                  <Link href="/" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Inicio</Link>
+                  <Link href="/entornos" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Entornos</Link>
+                  <Link href="/integraciones" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Integraciones</Link>
+                  <Link href="/mejores-practicas" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Mejores prácticas</Link>
+                  <Link href="/contacto" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Contacto</Link>
+                  <Link href="/soporte-tecnico" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Soporte técnico</Link>
+                  <Link href="/legal" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Legal</Link>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
       <main className="py-12 md:py-20">
         <div className="max-w-6xl mx-auto px-6">
-          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] dark:text-[#0dab70] mb-6">
             Blog
           </h1>
-          <p className="text-xl text-gray-600 mb-12">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-12">
             Artículos, noticias y análisis sobre inteligencia artificial en medicina
           </p>
           
           <div className="space-y-8">
             {/* Artículos Destacados */}
             <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Artículos Destacados</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Artículos Destacados</h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <article className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                <article className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="h-48 bg-gradient-to-r from-[#068959] to-[#057a4a] flex items-center justify-center">
                     <span className="text-white text-4xl">📊</span>
                   </div>
                   <div className="p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                       El Futuro de la Radiología con IA
                     </h3>
-                    <p className="text-gray-600 text-sm mb-4">
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
                       Exploramos cómo los modelos como NV-Reason-CXR están revolucionando 
                       el análisis de radiografías de tórax.
                     </p>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">15 de Enero, 2024</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">15 de Enero, 2024</span>
                       <Button size="sm" className="bg-[#068959] hover:bg-[#057a4a] text-white">
                         Leer más
                       </Button>
@@ -90,20 +95,20 @@ export default function Blog() {
                   </div>
                 </article>
 
-                <article className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                <article className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="h-48 bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center">
                     <span className="text-white text-4xl">🤖</span>
                   </div>
                   <div className="p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                       MedGemma: Un Modelo Médico Multimodal
                     </h3>
-                    <p className="text-gray-600 text-sm mb-4">
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
                       Análisis detallado de las capacidades y limitaciones del modelo 
                       MedGemma de Google Health.
                     </p>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">8 de Enero, 2024</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">8 de Enero, 2024</span>
                       <Button size="sm" className="bg-[#068959] hover:bg-[#057a4a] text-white">
                         Leer más
                       </Button>
@@ -111,20 +116,20 @@ export default function Blog() {
                   </div>
                 </article>
 
-                <article className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                <article className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="h-48 bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center">
                     <span className="text-white text-4xl">⚖️</span>
                   </div>
                   <div className="p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                       Aspectos Legales de la IA Médica
                     </h3>
-                    <p className="text-gray-600 text-sm mb-4">
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
                       Guía completa sobre las consideraciones legales y éticas en el 
                       uso de IA para diagnóstico médico.
                     </p>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">2 de Enero, 2024</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">2 de Enero, 2024</span>
                       <Button size="sm" className="bg-[#068959] hover:bg-[#057a4a] text-white">
                         Leer más
                       </Button>
@@ -136,30 +141,30 @@ export default function Blog() {
 
             {/* Categorías */}
             <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Categorías</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Categorías</h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gray-50 p-6 rounded-lg text-center hover:bg-gray-100 transition-colors cursor-pointer">
+                <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg text-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer">
                   <div className="text-3xl mb-3">🔬</div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Investigación</h3>
-                  <p className="text-sm text-gray-600">Estudios y avances en IA médica</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Investigación</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Estudios y avances en IA médica</p>
                 </div>
                 
-                <div className="bg-gray-50 p-6 rounded-lg text-center hover:bg-gray-100 transition-colors cursor-pointer">
+                <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg text-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer">
                   <div className="text-3xl mb-3">🛠️</div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Tecnología</h3>
-                  <p className="text-sm text-gray-600">Herramientas y frameworks</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Tecnología</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Herramientas y frameworks</p>
                 </div>
                 
-                <div className="bg-gray-50 p-6 rounded-lg text-center hover:bg-gray-100 transition-colors cursor-pointer">
+                <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg text-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer">
                   <div className="text-3xl mb-3">📚</div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Educación</h3>
-                  <p className="text-sm text-gray-600">Tutoriales y guías</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Educación</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Tutoriales y guías</p>
                 </div>
                 
-                <div className="bg-gray-50 p-6 rounded-lg text-center hover:bg-gray-100 transition-colors cursor-pointer">
+                <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg text-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer">
                   <div className="text-3xl mb-3">📰</div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Noticias</h3>
-                  <p className="text-sm text-gray-600">Últimas novedades del sector</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Noticias</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Últimas novedades del sector</p>
                 </div>
               </div>
             </section>
@@ -176,7 +181,7 @@ export default function Blog() {
                   <input
                     type="email"
                     placeholder="Tu email"
-                    className="flex-1 px-4 py-2 rounded-lg text-gray-900"
+                    className="flex-1 px-4 py-2 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
                   />
                   <Button className="bg-white text-[#068959] hover:bg-gray-100">
                     Suscribirse
@@ -197,7 +202,7 @@ export default function Blog() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-12 md:py-16 mt-20">
+      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12 md:py-16 mt-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <div className="space-y-4 sm:col-span-2 md:col-span-1">
@@ -208,7 +213,7 @@ export default function Blog() {
                 height={60}
                 className="w-auto h-12 md:h-16"
               />
-              <p className="text-gray-600 text-sm">Inteligencia Artificial para la salud.</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Inteligencia Artificial para la salud.</p>
               <div className="flex items-center gap-4 pt-4">
                 <Link href="https://www.instagram.com/cipreholding/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -228,65 +233,65 @@ export default function Blog() {
               </div>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Características</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Características</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] transition-colors">
+                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Características principales
                   </Link>
                 </li>
                 <li>
-                  <Link href="/experiencia-profesional" className="hover:text-[#068959] transition-colors">
+                  <Link href="/experiencia-profesional" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Experiencia profesional
                   </Link>
                 </li>
                 <li>
-                  <Link href="/integraciones" className="hover:text-[#068959] transition-colors">
+                  <Link href="/integraciones" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Integraciones
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Aprende más</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/blog" className="hover:text-[#068959] transition-colors">
+                  <Link href="/blog" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="/casos-de-estudio" className="hover:text-[#068959] transition-colors">
+                  <Link href="/casos-de-estudio" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Casos de estudio
                   </Link>
                 </li>
                 <li>
-                  <Link href="/historias-de-clientes" className="hover:text-[#068959] transition-colors">
+                  <Link href="/historias-de-clientes" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Historias de clientes
                   </Link>
                 </li>
                 <li>
-                  <Link href="/mejores-practicas" className="hover:text-[#068959] transition-colors">
+                  <Link href="/mejores-practicas" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Mejores prácticas
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Soporte</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/contacto" className="hover:text-[#068959] transition-colors">
+                  <Link href="/contacto" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Contacto
                   </Link>
                 </li>
                 <li>
-                  <Link href="/soporte-tecnico" className="hover:text-[#068959] transition-colors">
+                  <Link href="/soporte-tecnico" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Soporte técnico
                   </Link>
                 </li>
                 <li>
-                  <Link href="/legal" className="hover:text-[#068959] transition-colors">
+                  <Link href="/legal" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Legal
                   </Link>
                 </li>

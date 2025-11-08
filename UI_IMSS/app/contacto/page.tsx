@@ -2,15 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 import Link from "next/link"
 import ProtectedRoute from "@/components/auth/protected-route"
 
 function ContactoContent() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -24,44 +25,48 @@ function ContactoContent() {
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
-            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
-            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
-            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
-            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
-            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
-            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
+            <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Legal</Link>
+            <ThemeToggle />
           </nav>
-          {/* Menú móvil */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <button aria-label="Abrir menú" className="md:hidden text-gray-700 hover:text-[#068959] transition-colors">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 sm:w-80">
-              <nav className="mt-8 grid gap-4 text-base">
-                <Link href="/" className="text-gray-800 hover:text-[#068959]">Inicio</Link>
-                <Link href="/entornos" className="text-gray-800 hover:text-[#068959]">Entornos</Link>
-                <Link href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</Link>
-                <Link href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</Link>
-                <Link href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</Link>
-                <Link href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</Link>
-                <Link href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {/* Menú móvil */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <button aria-label="Abrir menú" className="md:hidden text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 sm:w-80 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                <nav className="mt-8 grid gap-4 text-base">
+                  <Link href="/" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Inicio</Link>
+                  <Link href="/entornos" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Entornos</Link>
+                  <Link href="/integraciones" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Integraciones</Link>
+                  <Link href="/mejores-practicas" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Mejores prácticas</Link>
+                  <Link href="/contacto" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Contacto</Link>
+                  <Link href="/soporte-tecnico" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Soporte técnico</Link>
+                  <Link href="/legal" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Legal</Link>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
       <main className="py-12 md:py-20">
         <div className="max-w-6xl mx-auto px-6">
-          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] dark:text-[#0dab70] mb-6">
             Contacto
           </h1>
-          <p className="text-xl text-gray-600 mb-12">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-12">
             Ponte en contacto con nuestro equipo para consultas, demostraciones o soporte
           </p>
           
@@ -69,7 +74,7 @@ function ContactoContent() {
             {/* Información de Contacto */}
             <div className="space-y-8">
               <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Información de Contacto</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Información de Contacto</h2>
                 
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
@@ -79,9 +84,9 @@ function ContactoContent() {
                       </svg>
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Email General</h3>
-                      <p className="text-gray-600">info@quetzalia.com</p>
-                      <p className="text-sm text-gray-500">Respuesta en 24 horas</p>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Email General</h3>
+                      <p className="text-gray-600 dark:text-gray-300">info@quetzalia.com</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Respuesta en 24 horas</p>
                     </div>
                   </div>
 
@@ -92,9 +97,9 @@ function ContactoContent() {
                       </svg>
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Teléfono</h3>
-                      <p className="text-gray-600">+52 (55) 1234-5678</p>
-                      <p className="text-sm text-gray-500">Lunes a Viernes, 9:00 AM - 6:00 PM (GMT-6)</p>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Teléfono</h3>
+                      <p className="text-gray-600 dark:text-gray-300">+52 (55) 1234-5678</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Lunes a Viernes, 9:00 AM - 6:00 PM (GMT-6)</p>
                     </div>
                   </div>
 
@@ -106,8 +111,8 @@ function ContactoContent() {
                       </svg>
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Dirección</h3>
-                      <p className="text-gray-600">Av. Insurgentes Sur 1234<br />Col. Del Valle, CDMX 03100<br />México</p>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Dirección</h3>
+                      <p className="text-gray-600 dark:text-gray-300">Av. Insurgentes Sur 1234<br />Col. Del Valle, CDMX 03100<br />México</p>
                     </div>
                   </div>
 
@@ -118,8 +123,8 @@ function ContactoContent() {
                       </svg>
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Horarios de Atención</h3>
-                      <p className="text-gray-600">Lunes a Viernes: 9:00 AM - 6:00 PM<br />Sábados: 10:00 AM - 2:00 PM<br />Domingos: Cerrado</p>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Horarios de Atención</h3>
+                      <p className="text-gray-600 dark:text-gray-300">Lunes a Viernes: 9:00 AM - 6:00 PM<br />Sábados: 10:00 AM - 2:00 PM<br />Domingos: Cerrado</p>
                     </div>
                   </div>
                 </div>
@@ -127,31 +132,31 @@ function ContactoContent() {
 
               {/* Departamentos Especializados */}
               <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Departamentos Especializados</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Departamentos Especializados</h2>
                 
                 <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-gray-900">Ventas y Demostraciones</h3>
-                    <p className="text-gray-600 text-sm mb-2">ventas@quetzalia.com</p>
-                    <p className="text-xs text-gray-500">Para consultas comerciales y solicitar demostraciones</p>
+                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">Ventas y Demostraciones</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">ventas@quetzalia.com</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Para consultas comerciales y solicitar demostraciones</p>
                   </div>
                   
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-gray-900">Soporte Técnico</h3>
-                    <p className="text-gray-600 text-sm mb-2">soporte@quetzalia.com</p>
-                    <p className="text-xs text-gray-500">Asistencia técnica y resolución de problemas</p>
+                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">Soporte Técnico</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">soporte@quetzalia.com</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Asistencia técnica y resolución de problemas</p>
                   </div>
                   
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-gray-900">Consultas Legales</h3>
-                    <p className="text-gray-600 text-sm mb-2">legal@quetzalia.com</p>
-                    <p className="text-xs text-gray-500">Para asuntos legales y de privacidad</p>
+                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">Consultas Legales</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">legal@quetzalia.com</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Para asuntos legales y de privacidad</p>
                   </div>
                   
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-semibold text-gray-900">Prensa y Medios</h3>
-                    <p className="text-gray-600 text-sm mb-2">prensa@quetzalia.com</p>
-                    <p className="text-xs text-gray-500">Para consultas de medios y comunicaciones</p>
+                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">Prensa y Medios</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">prensa@quetzalia.com</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Para consultas de medios y comunicaciones</p>
                   </div>
                 </div>
               </section>
@@ -159,12 +164,12 @@ function ContactoContent() {
 
             {/* Formulario de Contacto */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Envíanos un Mensaje</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Envíanos un Mensaje</h2>
               
               <form className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Nombre *
                     </label>
                     <input
@@ -172,12 +177,12 @@ function ContactoContent() {
                       id="nombre"
                       name="nombre"
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#068959] focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#068959] dark:focus:ring-[#0dab70] focus:border-transparent"
                       placeholder="Tu nombre completo"
                     />
                   </div>
                   <div>
-                    <label htmlFor="apellido" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="apellido" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Apellido *
                     </label>
                     <input
@@ -185,14 +190,14 @@ function ContactoContent() {
                       id="apellido"
                       name="apellido"
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#068959] focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#068959] dark:focus:ring-[#0dab70] focus:border-transparent"
                       placeholder="Tu apellido"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Email *
                   </label>
                   <input
@@ -200,46 +205,46 @@ function ContactoContent() {
                     id="email"
                     name="email"
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#068959] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#068959] dark:focus:ring-[#0dab70] focus:border-transparent"
                     placeholder="tu@email.com"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Teléfono
                   </label>
                   <input
                     type="tel"
                     id="telefono"
                     name="telefono"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#068959] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#068959] dark:focus:ring-[#0dab70] focus:border-transparent"
                     placeholder="+52 (55) 1234-5678"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="institucion" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="institucion" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Institución
                   </label>
                   <input
                     type="text"
                     id="institucion"
                     name="institucion"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#068959] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#068959] dark:focus:ring-[#0dab70] focus:border-transparent"
                     placeholder="Hospital, clínica o institución"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="asunto" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="asunto" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Asunto *
                   </label>
                   <select
                     id="asunto"
                     name="asunto"
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#068959] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#068959] dark:focus:ring-[#0dab70] focus:border-transparent"
                   >
                     <option value="">Selecciona un asunto</option>
                     <option value="demo">Solicitar demostración</option>
@@ -252,7 +257,7 @@ function ContactoContent() {
                 </div>
 
                 <div>
-                  <label htmlFor="mensaje" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="mensaje" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Mensaje *
                   </label>
                   <textarea
@@ -260,7 +265,7 @@ function ContactoContent() {
                     name="mensaje"
                     rows={5}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#068959] focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-[#068959] dark:focus:ring-[#0dab70] focus:border-transparent"
                     placeholder="Describe tu consulta o solicitud..."
                   ></textarea>
                 </div>
@@ -271,10 +276,10 @@ function ContactoContent() {
                     id="privacidad"
                     name="privacidad"
                     required
-                    className="mt-1 w-4 h-4 text-[#068959] border-gray-300 rounded focus:ring-[#068959]"
+                    className="mt-1 w-4 h-4 text-[#068959] border-gray-300 dark:border-gray-700 rounded focus:ring-[#068959] dark:focus:ring-[#0dab70] bg-white dark:bg-gray-800"
                   />
-                  <label htmlFor="privacidad" className="text-sm text-gray-600">
-                    Acepto la <Link href="/legal" className="text-[#068959] hover:underline">política de privacidad</Link> y 
+                  <label htmlFor="privacidad" className="text-sm text-gray-600 dark:text-gray-300">
+                    Acepto la <Link href="/legal" className="text-[#068959] dark:text-[#0dab70] hover:underline">política de privacidad</Link> y 
                     el procesamiento de mis datos personales. *
                   </label>
                 </div>
@@ -287,8 +292,8 @@ function ContactoContent() {
           </div>
 
           {/* Redes Sociales */}
-          <section className="mt-16 bg-gray-50 p-8 rounded-xl">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Síguenos en Redes Sociales</h2>
+          <section className="mt-16 bg-gray-50 dark:bg-gray-800 p-8 rounded-xl">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 text-center">Síguenos en Redes Sociales</h2>
             <div className="flex justify-center gap-6">
               <Link href="https://www.instagram.com/cipreholding/" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform">
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -311,7 +316,7 @@ function ContactoContent() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-12 md:py-16 mt-20">
+      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12 md:py-16 mt-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <div className="space-y-4 sm:col-span-2 md:col-span-1">
@@ -322,7 +327,7 @@ function ContactoContent() {
                 height={60}
                 className="w-auto h-12 md:h-16"
               />
-              <p className="text-gray-600 text-sm">Inteligencia Artificial para la salud.</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Inteligencia Artificial para la salud.</p>
               <div className="flex items-center gap-4 pt-4">
                 <Link href="https://www.instagram.com/cipreholding/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -342,65 +347,65 @@ function ContactoContent() {
               </div>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Características</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Características</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] transition-colors">
+                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Características principales
                   </Link>
                 </li>
                 <li>
-                  <Link href="/experiencia-profesional" className="hover:text-[#068959] transition-colors">
+                  <Link href="/experiencia-profesional" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Experiencia profesional
                   </Link>
                 </li>
                 <li>
-                  <Link href="/integraciones" className="hover:text-[#068959] transition-colors">
+                  <Link href="/integraciones" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Integraciones
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Aprende más</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/blog" className="hover:text-[#068959] transition-colors">
+                  <Link href="/blog" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="/casos-de-estudio" className="hover:text-[#068959] transition-colors">
+                  <Link href="/casos-de-estudio" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Casos de estudio
                   </Link>
                 </li>
                 <li>
-                  <Link href="/historias-de-clientes" className="hover:text-[#068959] transition-colors">
+                  <Link href="/historias-de-clientes" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Historias de clientes
                   </Link>
                 </li>
                 <li>
-                  <Link href="/mejores-practicas" className="hover:text-[#068959] transition-colors">
+                  <Link href="/mejores-practicas" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Mejores prácticas
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Soporte</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/contacto" className="hover:text-[#068959] transition-colors">
+                  <Link href="/contacto" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Contacto
                   </Link>
                 </li>
                 <li>
-                  <Link href="/soporte-tecnico" className="hover:text-[#068959] transition-colors">
+                  <Link href="/soporte-tecnico" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Soporte técnico
                   </Link>
                 </li>
                 <li>
-                  <Link href="/legal" className="hover:text-[#068959] transition-colors">
+                  <Link href="/legal" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Legal
                   </Link>
                 </li>

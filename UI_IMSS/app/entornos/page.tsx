@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
@@ -18,9 +19,9 @@ function EntornosAprendizajeContent() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -34,35 +35,39 @@ function EntornosAprendizajeContent() {
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
-            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
-            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
-            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
-            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
-            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
-            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
+            <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Legal</Link>
+            <ThemeToggle />
           </nav>
-          {/* Menú móvil */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <button aria-label="Abrir menú" className="md:hidden text-gray-700 hover:text-[#068959] transition-colors">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 sm:w-80">
-              <nav className="mt-8 grid gap-4 text-base">
-                <Link href="/" className="text-gray-800 hover:text-[#068959]">Inicio</Link>
-                <Link href="/entornos" className="text-gray-800 hover:text-[#068959]">Entornos</Link>
-                <Link href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</Link>
-                <Link href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</Link>
-                <Link href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</Link>
-                <Link href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</Link>
-                <Link href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {/* Menú móvil */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <button aria-label="Abrir menú" className="md:hidden text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 sm:w-80 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                <nav className="mt-8 grid gap-4 text-base">
+                  <Link href="/" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Inicio</Link>
+                  <Link href="/entornos" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Entornos</Link>
+                  <Link href="/integraciones" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Integraciones</Link>
+                  <Link href="/mejores-practicas" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Mejores prácticas</Link>
+                  <Link href="/contacto" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Contacto</Link>
+                  <Link href="/soporte-tecnico" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Soporte técnico</Link>
+                  <Link href="/legal" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Legal</Link>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
@@ -70,10 +75,10 @@ function EntornosAprendizajeContent() {
         <div className="max-w-7xl mx-auto px-6">
           {/* Título Principal */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#068959] mb-4">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#068959] dark:text-[#0dab70] mb-4">
               Entornos de Aprendizaje
             </h1>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
               Selecciona el entorno de aprendizaje que mejor se adapte a tus necesidades educativas
             </p>
           </div>
@@ -81,8 +86,8 @@ function EntornosAprendizajeContent() {
           {/* Grid de Opciones */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 max-w-7xl mx-auto">
             {/* Simulación */}
-            <div className="bg-white rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl transition-shadow">
-              <div className="relative w-full h-64 md:h-80">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 flex flex-col h-full cursor-pointer">
+              <div className="relative w-full h-64 md:h-80 flex-shrink-0">
                 <Image
                   src="/5.png"
                   alt="Simulación"
@@ -90,27 +95,29 @@ function EntornosAprendizajeContent() {
                   className="object-cover"
                 />
               </div>
-              <div className="p-6 md:p-8 space-y-4">
-                <h2 className="text-2xl md:text-3xl font-bold text-[#068959]">
+              <div className="p-6 md:p-8 flex flex-col flex-grow space-y-4">
+                <h2 className="text-2xl md:text-3xl font-bold text-[#068959] dark:text-[#0dab70]">
                   Simulación
                 </h2>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed flex-grow">
                   Sistema avanzado de simulación de entrevistas médicas pre-visita que utiliza MedGemma como entrevistador y pacientes virtuales para generar reportes clínicos estructurados.
                 </p>
-                <Link 
-                  href={`${baseUrl}:5003`}
-                  target="_blank"
-                >
-                  <Button className="w-full bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl">
-                    Acceder a Simulación
-                  </Button>
-                </Link>
+                <div className="mt-auto pt-4">
+                  <Link 
+                    href={`${baseUrl}:5003`}
+                    target="_blank"
+                  >
+                    <Button className="w-full bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95">
+                      Acceder a Simulación
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
 
             {/* Wiki Radiologia */}
-            <div className="bg-white rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl transition-shadow">
-              <div className="relative w-full h-64 md:h-80">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 flex flex-col h-full cursor-pointer">
+              <div className="relative w-full h-64 md:h-80 flex-shrink-0">
                 <Image
                   src="/4.png"
                   alt="Wiki Radiologia"
@@ -118,27 +125,29 @@ function EntornosAprendizajeContent() {
                   className="object-cover"
                 />
               </div>
-              <div className="p-6 md:p-8 space-y-4">
-                <h2 className="text-2xl md:text-3xl font-bold text-[#068959]">
+              <div className="p-6 md:p-8 flex flex-col flex-grow space-y-4">
+                <h2 className="text-2xl md:text-3xl font-bold text-[#068959] dark:text-[#0dab70]">
                   Wiki Radiologia
                 </h2>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed flex-grow">
                   Plataforma educativa interactiva que utiliza casos de estudio reales y análisis multimodal para enseñar interpretación radiológica y términos médicos especializados.
                 </p>
-                <Link 
-                  href={`${baseUrl}:5002`}
-                  target="_blank"
-                >
-                  <Button className="w-full bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl">
-                    Acceder a Educación
-                  </Button>
-                </Link>
+                <div className="mt-auto pt-4">
+                  <Link 
+                    href={`${baseUrl}:5002`}
+                    target="_blank"
+                  >
+                    <Button className="w-full bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95">
+                      Acceder a Educación
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
 
             {/* Preguntas de radiologia */}
-            <div className="bg-white rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl transition-shadow">
-              <div className="relative w-full h-64 md:h-80">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 flex flex-col h-full cursor-pointer">
+              <div className="relative w-full h-64 md:h-80 flex-shrink-0">
                 <Image
                   src="/3.png"
                   alt="Preguntas de radiologia"
@@ -146,21 +155,23 @@ function EntornosAprendizajeContent() {
                   className="object-cover"
                 />
               </div>
-              <div className="p-6 md:p-8 space-y-4">
-                <h2 className="text-2xl md:text-3xl font-bold text-[#068959]">
+              <div className="p-6 md:p-8 flex flex-col flex-grow space-y-4">
+                <h2 className="text-2xl md:text-3xl font-bold text-[#068959] dark:text-[#0dab70]">
                   Preguntas de radiologia
                 </h2>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed flex-grow">
                   Sistema interactivo de aprendizaje que utiliza radiografías de tórax y MedGemma para generar preguntas de opción múltiple que mejoran tus habilidades de interpretación radiológica mediante casos reales.
                 </p>
-                <Link 
-                  href={`${baseUrl}:5004`}
-                  target="_blank"
-                >
-                  <Button className="w-full bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl">
-                    Acceder a Preguntas
-                  </Button>
-                </Link>
+                <div className="mt-auto pt-4">
+                  <Link 
+                    href={`${baseUrl}:5004`}
+                    target="_blank"
+                  >
+                    <Button className="w-full bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95">
+                      Acceder a Preguntas
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -177,7 +188,7 @@ function EntornosAprendizajeContent() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-12 md:py-16 mt-20">
+      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12 md:py-16 mt-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <div className="space-y-4 sm:col-span-2 md:col-span-1">
@@ -188,7 +199,7 @@ function EntornosAprendizajeContent() {
                 height={60}
                 className="w-auto h-12 md:h-16"
               />
-              <p className="text-gray-600 text-sm">Inteligencia Artificial para la salud.</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Inteligencia Artificial para la salud.</p>
               <div className="flex items-center gap-4 pt-4">
                 <Link href="https://www.instagram.com/cipreholding/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -208,65 +219,65 @@ function EntornosAprendizajeContent() {
               </div>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Características</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Características</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] transition-colors">
+                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Características principales
                   </Link>
                 </li>
                 <li>
-                  <Link href="/experiencia-profesional" className="hover:text-[#068959] transition-colors">
+                  <Link href="/experiencia-profesional" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Experiencia profesional
                   </Link>
                 </li>
                 <li>
-                  <Link href="/integraciones" className="hover:text-[#068959] transition-colors">
+                  <Link href="/integraciones" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Integraciones
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Aprende más</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/blog" className="hover:text-[#068959] transition-colors">
+                  <Link href="/blog" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="/casos-de-estudio" className="hover:text-[#068959] transition-colors">
+                  <Link href="/casos-de-estudio" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Casos de estudio
                   </Link>
                 </li>
                 <li>
-                  <Link href="/historias-de-clientes" className="hover:text-[#068959] transition-colors">
+                  <Link href="/historias-de-clientes" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Historias de clientes
                   </Link>
                 </li>
                 <li>
-                  <Link href="/mejores-practicas" className="hover:text-[#068959] transition-colors">
+                  <Link href="/mejores-practicas" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Mejores prácticas
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Soporte</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/contacto" className="hover:text-[#068959] transition-colors">
+                  <Link href="/contacto" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Contacto
                   </Link>
                 </li>
                 <li>
-                  <Link href="/soporte-tecnico" className="hover:text-[#068959] transition-colors">
+                  <Link href="/soporte-tecnico" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Soporte técnico
                   </Link>
                 </li>
                 <li>
-                  <Link href="/legal" className="hover:text-[#068959] transition-colors">
+                  <Link href="/legal" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Legal
                   </Link>
                 </li>

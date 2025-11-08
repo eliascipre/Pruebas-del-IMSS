@@ -2,15 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 import Link from "next/link"
 import ProtectedRoute from "@/components/auth/protected-route"
 
 function SoporteTecnicoContent() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -24,82 +25,86 @@ function SoporteTecnicoContent() {
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
-            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
-            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
-            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
-            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
-            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
-            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
+            <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Legal</Link>
+            <ThemeToggle />
           </nav>
-          {/* Menú móvil */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <button aria-label="Abrir menú" className="md:hidden text-gray-700 hover:text-[#068959] transition-colors">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 sm:w-80">
-              <nav className="mt-8 grid gap-4 text-base">
-                <Link href="/" className="text-gray-800 hover:text-[#068959]">Inicio</Link>
-                <Link href="/entornos" className="text-gray-800 hover:text-[#068959]">Entornos</Link>
-                <Link href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</Link>
-                <Link href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</Link>
-                <Link href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</Link>
-                <Link href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</Link>
-                <Link href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {/* Menú móvil */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <button aria-label="Abrir menú" className="md:hidden text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 sm:w-80 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                <nav className="mt-8 grid gap-4 text-base">
+                  <Link href="/" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Inicio</Link>
+                  <Link href="/entornos" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Entornos</Link>
+                  <Link href="/integraciones" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Integraciones</Link>
+                  <Link href="/mejores-practicas" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Mejores prácticas</Link>
+                  <Link href="/contacto" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Contacto</Link>
+                  <Link href="/soporte-tecnico" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Soporte técnico</Link>
+                  <Link href="/legal" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Legal</Link>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
       <main className="py-12 md:py-20">
         <div className="max-w-6xl mx-auto px-6">
-          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] dark:text-[#0dab70] mb-6">
             Soporte Técnico
           </h1>
-          <p className="text-xl text-gray-600 mb-12">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-12">
             Asistencia técnica especializada para resolver cualquier problema con nuestra plataforma
           </p>
           
           <div className="space-y-12">
             {/* Canales de Soporte */}
             <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Canales de Soporte</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Canales de Soporte</h2>
               <div className="grid md:grid-cols-3 gap-6">
-                <div className="bg-white border border-gray-200 rounded-xl p-6 text-center hover:shadow-lg transition-shadow">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:shadow-lg transition-shadow">
+                  <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Email de Soporte</h3>
-                  <p className="text-gray-600 mb-4">soporte@quetzalia.com</p>
-                  <p className="text-sm text-gray-500">Respuesta en 2-4 horas</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Email de Soporte</h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">soporte@quetzalia.com</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Respuesta en 2-4 horas</p>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-xl p-6 text-center hover:shadow-lg transition-shadow">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:shadow-lg transition-shadow">
+                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                     </svg>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Teléfono</h3>
-                  <p className="text-gray-600 mb-4">+52 (55) 1234-5678</p>
-                  <p className="text-sm text-gray-500">Lunes a Viernes, 9:00 AM - 6:00 PM</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Teléfono</h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">+52 (55) 1234-5678</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Lunes a Viernes, 9:00 AM - 6:00 PM</p>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-xl p-6 text-center hover:shadow-lg transition-shadow">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:shadow-lg transition-shadow">
+                  <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Chat en Vivo</h3>
-                  <p className="text-gray-600 mb-4">Disponible 24/7</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Chat en Vivo</h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">Disponible 24/7</p>
                   <Button className="bg-[#068959] hover:bg-[#057a4a] text-white">
                     Iniciar Chat
                   </Button>
@@ -111,62 +116,62 @@ function SoporteTecnicoContent() {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Preguntas Frecuentes</h2>
               <div className="space-y-4">
-                <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
                   <button className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50">
                     <span className="font-medium text-gray-900">¿Cómo puedo acceder a la plataforma?</span>
                     <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-                  <div className="px-6 pb-4 text-gray-600">
+                  <div className="px-6 pb-4 text-gray-600 dark:text-gray-300">
                     <p>Para acceder a la plataforma, necesitas una cuenta autorizada. Contacta a nuestro equipo de ventas para obtener credenciales de acceso y configurar tu cuenta institucional.</p>
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
                   <button className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50">
                     <span className="font-medium text-gray-900">¿Qué formatos de imagen son compatibles?</span>
                     <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-                  <div className="px-6 pb-4 text-gray-600">
+                  <div className="px-6 pb-4 text-gray-600 dark:text-gray-300">
                     <p>La plataforma es compatible con formatos JPG y PNG. Recomendamos usar imágenes de alta calidad en estos formatos para obtener los mejores resultados de análisis.</p>
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
                   <button className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50">
                     <span className="font-medium text-gray-900">¿Cuánto tiempo toma el análisis de una imagen?</span>
                     <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-                  <div className="px-6 pb-4 text-gray-600">
+                  <div className="px-6 pb-4 text-gray-600 dark:text-gray-300">
                     <p>El análisis típico toma entre 30 segundos y 2 minutos, dependiendo de la complejidad de la imagen y la carga del servidor. Las radiografías simples suelen procesarse más rápido.</p>
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
                   <button className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50">
                     <span className="font-medium text-gray-900">¿Cómo puedo reportar un problema técnico?</span>
                     <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-                  <div className="px-6 pb-4 text-gray-600">
+                  <div className="px-6 pb-4 text-gray-600 dark:text-gray-300">
                     <p>Puedes reportar problemas técnicos a través de nuestro email de soporte, chat en vivo o completando el formulario de soporte. Incluye capturas de pantalla y descripción detallada del problema.</p>
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
                   <button className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50">
                     <span className="font-medium text-gray-900">¿La plataforma funciona en dispositivos móviles?</span>
                     <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
-                  <div className="px-6 pb-4 text-gray-600">
+                  <div className="px-6 pb-4 text-gray-600 dark:text-gray-300">
                     <p>Sí, la plataforma es completamente responsive y funciona en tablets y smartphones. Sin embargo, recomendamos usar una pantalla de al menos 10 pulgadas para una mejor experiencia de análisis.</p>
                   </div>
                 </div>
@@ -315,7 +320,7 @@ function SoporteTecnicoContent() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-12 md:py-16 mt-20">
+      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12 md:py-16 mt-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <div className="space-y-4 sm:col-span-2 md:col-span-1">
@@ -326,7 +331,7 @@ function SoporteTecnicoContent() {
                 height={60}
                 className="w-auto h-12 md:h-16"
               />
-              <p className="text-gray-600 text-sm">Inteligencia Artificial para la salud.</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Inteligencia Artificial para la salud.</p>
               <div className="flex items-center gap-4 pt-4">
                 <Link href="https://www.instagram.com/cipreholding/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -346,8 +351,8 @@ function SoporteTecnicoContent() {
               </div>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Características</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Características</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
                   <Link href="/caracteristicas-principales" className="hover:text-[#068959] transition-colors">
                     Características principales
@@ -366,8 +371,8 @@ function SoporteTecnicoContent() {
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Aprende más</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
                   <Link href="/blog" className="hover:text-[#068959] transition-colors">
                     Blog
@@ -391,8 +396,8 @@ function SoporteTecnicoContent() {
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Soporte</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
                   <Link href="/contacto" className="hover:text-[#068959] transition-colors">
                     Contacto

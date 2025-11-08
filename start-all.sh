@@ -227,8 +227,17 @@ main() {
     # Iniciar servicios backend
     print_status "Iniciando servicios backend..."
     
+    # Obtener ruta del venv (una sola vez)
+    PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
+    VENV_PATH="$PROJECT_ROOT/venv"
+    
     # Chatbot - usa main.py (FastAPI) no app.py (Flask legacy)
-    run_bg "chatbot" "cd chatbot && $PYTHON_CMD main.py"
+    # Activar venv si existe, similar a radiografias y nv-reason-cxr
+    if [ -d "$VENV_PATH" ]; then
+        run_bg "chatbot" "cd chatbot && source $VENV_PATH/bin/activate && $PYTHON_CMD main.py"
+    else
+        run_bg "chatbot" "cd chatbot && $PYTHON_CMD main.py"
+    fi
     
     # Educación - usa app.py
     run_bg "educacion" "cd Educacion_radiografia && $PYTHON_CMD app.py"
@@ -237,18 +246,16 @@ main() {
     run_bg "simulacion" "cd Simulacion && $PYTHON_CMD app.py"
     
     # Radiografías - usa app.py con venv
-    PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
-    VENV_PATH="$PROJECT_ROOT/../venv"
+    # VENV_PATH ya está definido arriba
+    # Forzar CPU para evitar problemas de VRAM
     if [ -d "$VENV_PATH" ]; then
-        run_bg "radiografias" "cd radiografias_torax/backend && source $VENV_PATH/bin/activate && $PYTHON_CMD app.py"
+        run_bg "radiografias" "cd radiografias_torax/backend && source $VENV_PATH/bin/activate && FORCE_CPU=1 $PYTHON_CMD app.py"
     else
-        run_bg "radiografias" "cd radiografias_torax/backend && $PYTHON_CMD app.py"
+        run_bg "radiografias" "cd radiografias_torax/backend && FORCE_CPU=1 $PYTHON_CMD app.py"
     fi
     
     # NV-Reason-CXR - Gradio service (usar venv si existe, sin token requerido)
-    # La ruta del venv debe ser relativa desde IMSS/ (no desde nv-reason-cxr/)
-    PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
-    VENV_PATH="$PROJECT_ROOT/../venv"
+    # VENV_PATH ya está definido arriba
     NV_REASON_DIR="$PROJECT_ROOT/nv-reason-cxr"
 
     NV_REASON_MODEL_RESOLVED="$(resolve_nv_reason_model_path || true)"
@@ -261,7 +268,8 @@ main() {
     fi
 
     NV_REASON_ALLOW_DOWNLOADS_VALUE="${NV_REASON_ALLOW_DOWNLOADS:-$NV_REASON_ALLOW_DEFAULT}"
-    NV_REASON_ENV_CMD="PORT=5005 NV_REASON_ALLOW_DOWNLOADS=$NV_REASON_ALLOW_DOWNLOADS_VALUE"
+    # Forzar CPU para evitar problemas de VRAM
+    NV_REASON_ENV_CMD="PORT=5005 FORCE_CPU=1 NV_REASON_ALLOW_DOWNLOADS=$NV_REASON_ALLOW_DOWNLOADS_VALUE"
 
     if [ -n "$NV_REASON_MODEL_RESOLVED" ]; then
         local model_path_escaped
@@ -296,7 +304,7 @@ main() {
     sleep 5
     
     # Verificar servicios (en background para no bloquear)
-    wait_for_service "http://localhost:5001/api/health" "Chatbot" || true
+    wait_for_service "http://localhost:5001/health" "Chatbot" || true
     wait_for_service "http://localhost:5002/api/health" "Educación" || true
     wait_for_service "http://localhost:5003/api/health" "Simulación" || true
     wait_for_service "http://localhost:5004/api/health" "Radiografías" || true

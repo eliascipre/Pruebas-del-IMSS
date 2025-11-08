@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
@@ -21,9 +22,9 @@ function HomeContent() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/home">
@@ -37,50 +38,53 @@ function HomeContent() {
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link href="/home" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
-            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
-            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
-            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
-            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
-            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
-            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
+            <Link href="/home" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Legal</Link>
+            <ThemeToggle />
           </nav>
-          {/* Mobile menu */}
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <button aria-label="Abrir menú" className="md:hidden text-gray-700 hover:text-[#068959] transition-colors">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 sm:w-80">
-              <nav className="mt-8 grid gap-4 text-base">
-                <a onClick={()=>setMobileOpen(false)} href="/home" className="text-gray-800 hover:text-[#068959]">Inicio</a>
-                <a onClick={()=>setMobileOpen(false)} href="/entornos" className="text-gray-800 hover:text-[#068959]">Entornos</a>
-                <a onClick={()=>setMobileOpen(false)} href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</a>
-                <a onClick={()=>setMobileOpen(false)} href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</a>
-                <a onClick={()=>setMobileOpen(false)} href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</a>
-                <a onClick={()=>setMobileOpen(false)} href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</a>
-                <a onClick={()=>setMobileOpen(false)} href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</a>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            {/* Mobile menu */}
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <button aria-label="Abrir menú" className="md:hidden text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 sm:w-80 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                <nav className="mt-8 grid gap-4 text-base">
+                  <a onClick={()=>setMobileOpen(false)} href="/home" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Inicio</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/entornos" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Entornos</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/integraciones" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Integraciones</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/mejores-practicas" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Mejores prácticas</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/contacto" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Contacto</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/soporte-tecnico" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Soporte técnico</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/legal" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Legal</a>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
       <main>
         {/* Hero Section for Desktop Content */}
-        <section className="w-full bg-white py-12 md:py-16">
+        <section className="w-full bg-white dark:bg-gray-900 py-12 md:py-16">
           <div className="max-w-7xl mx-auto px-6">
             {/* Centered Title and Description */}
             <div className="text-center max-w-4xl mx-auto space-y-6 mb-12">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold">
-                <span className="text-indigo-900">IA en Imagenología:</span>
+                <span className="text-indigo-900 dark:text-indigo-300">IA en Imagenología:</span>
                 <br />
-                <span className="text-[#068959]">El Camino hacia la Máxima Certeza Diagnóstica.</span>
+                <span className="text-[#068959] dark:text-[#0dab70]">El Camino hacia la Máxima Certeza Diagnóstica.</span>
               </h1>
-              <div className="text-lg md:text-xl text-gray-700 leading-relaxed mx-auto space-y-4 max-w-4xl">
+              <div className="text-lg md:text-xl text-gray-700 dark:text-gray-300 leading-relaxed mx-auto space-y-4 max-w-4xl">
                 <p>
                   LLM Multimodal experto en razonamiento clínico avanzado. Comprensión multimodal, generación de reportes de alta calidad, agente de triaje multi-especialidad. Experto en Dermatología, Histopatología, Oftalmología, entre otras.
                 </p>
@@ -108,11 +112,11 @@ function HomeContent() {
         </section>
 
         {/* Powered By Section */}
-        <section className="bg-gray-50 py-8 md:py-12 border-t border-gray-200">
+        <section className="bg-gray-50 dark:bg-gray-800 py-8 md:py-12 border-t border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-6">
-            <p className="text-center text-gray-500 text-xs md:text-sm mb-4 md:mb-6 font-medium">Desarrollado por:</p>
+            <p className="text-center text-gray-500 dark:text-gray-400 text-xs md:text-sm mb-4 md:mb-6 font-medium">Desarrollado por:</p>
             <div className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8 flex-wrap">
-              <div className="bg-white px-6 md:px-10 py-4 md:py-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+              <div className="bg-white dark:bg-gray-900 px-6 md:px-10 py-4 md:py-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
                 <Image
                   src="/logo_nvidia.png"
                   alt="NVIDIA"
@@ -121,7 +125,7 @@ function HomeContent() {
                   className="object-contain w-[80px] md:w-[120px] h-auto"
                 />
               </div>
-              <div className="bg-white px-5 md:px-8 py-4 md:py-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+              <div className="bg-white dark:bg-gray-900 px-5 md:px-8 py-4 md:py-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
                 <Image
                   src="/logo_mexico.png"
                   alt="Hecho en México"
@@ -130,7 +134,7 @@ function HomeContent() {
                   className="object-contain w-[100px] md:w-[140px] h-auto"
                 />
               </div>
-              <div className="bg-white px-6 md:px-10 py-4 md:py-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+              <div className="bg-white dark:bg-gray-900 px-6 md:px-10 py-4 md:py-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
                 <Image
                   src="/logo_cipre_holding.png"
                   alt="CIPRE Holding"
@@ -144,14 +148,14 @@ function HomeContent() {
         </section>
 
         {/* Section 1: Agente de Inteligencia Artificial - text left, image right */}
-        <section id="agentes" className="py-12 md:py-20 bg-white scroll-mt-20">
+        <section id="agentes" className="py-12 md:py-20 bg-white dark:bg-gray-900 scroll-mt-20">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
               <div className="space-y-4 md:space-y-6 order-2 md:order-1">
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] leading-tight">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] dark:text-[#0dab70] leading-tight">
                   Agente de Inteligencia Artificial
                 </h2>
-                <p className="text-gray-600 text-base md:text-lg leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 text-base md:text-lg leading-relaxed">
                   Nuestro asistente de inteligencia artificial especializado en medicina utiliza modelos avanzados como MedGemma para brindar respuestas precisas y contextualizadas sobre temas médicos y radiológicos.
                 </p>
                 <Link href="/chat">
@@ -173,7 +177,7 @@ function HomeContent() {
         </section>
 
         {/* Section 2: Radiografías de Tórax - image left, text right */}
-        <section className="py-12 md:py-20 bg-gray-50">
+        <section className="py-12 md:py-20 bg-gray-50 dark:bg-gray-800">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
               <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
@@ -185,13 +189,12 @@ function HomeContent() {
                 />
               </div>
               <div className="space-y-4 md:space-y-6">
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] leading-tight">Radiografías de Tórax</h2>
-                <p className="text-gray-600 text-base md:text-lg leading-relaxed">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] dark:text-[#0dab70] leading-tight">Radiografías de Tórax</h2>
+                <p className="text-gray-600 dark:text-gray-300 text-base md:text-lg leading-relaxed">
                   Compañero de aprendizaje radiológico que utiliza MedGemma multimodal con sistema RAG para crear experiencias educativas interactivas con radiografías de tórax.
                 </p>
                 <Link 
-                  href={`${baseUrl}:5005`}
-                  target="_blank"
+                  href="/radiografias"
                 >
                   <Button className="bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl w-full sm:w-auto">
                     Analizar Radiografías
@@ -203,7 +206,7 @@ function HomeContent() {
         </section>
 
         {/* Section 3: Entornos de aprendizaje - image left, text right */}
-        <section className="py-12 md:py-20 bg-white">
+        <section className="py-12 md:py-20 bg-white dark:bg-gray-900">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
               <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
@@ -215,8 +218,8 @@ function HomeContent() {
                 />
               </div>
               <div className="space-y-4 md:space-y-6">
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] leading-tight">Entornos de aprendizaje</h2>
-                <p className="text-gray-600 text-base md:text-lg leading-relaxed">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] dark:text-[#0dab70] leading-tight">Entornos de aprendizaje</h2>
+                <p className="text-gray-600 dark:text-gray-300 text-base md:text-lg leading-relaxed">
                   Plataforma educativa interactiva que utiliza casos de estudio reales y análisis multimodal para enseñar interpretación radiológica y términos médicos especializados.
                 </p>
                 <Link href="/entornos">
@@ -230,14 +233,14 @@ function HomeContent() {
         </section>
 
         {/* Section 4: Simulador de conversaciones - text left, image right */}
-        <section className="py-12 md:py-20 bg-gray-50">
+        <section className="py-12 md:py-20 bg-gray-50 dark:bg-gray-800">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
               <div className="space-y-4 md:space-y-6 order-2 md:order-1">
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] leading-tight">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] dark:text-[#0dab70] leading-tight">
                   Simulador de conversaciones
                 </h2>
-                <p className="text-gray-600 text-base md:text-lg leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 text-base md:text-lg leading-relaxed">
                   Sistema avanzado de simulación de entrevistas médicas pre-visita que utiliza MedGemma como entrevistador y pacientes virtuales para generar reportes clínicos estructurados.
                 </p>
                 <Link 
@@ -262,7 +265,7 @@ function HomeContent() {
         </section>
 
         {/* Footer */}
-        <footer className="bg-white border-t border-gray-200 py-12 md:py-16">
+        <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12 md:py-16">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
               <div className="space-y-4 sm:col-span-2 md:col-span-1">
@@ -273,7 +276,7 @@ function HomeContent() {
                   height={60}
                   className="w-auto h-12 md:h-16"
                 />
-                <p className="text-gray-600 text-sm">Inteligencia Artificial para la salud.</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">Inteligencia Artificial para la salud.</p>
                 <div className="flex items-center gap-4 pt-4">
                   <Link href="https://www.instagram.com/cipreholding/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -293,65 +296,65 @@ function HomeContent() {
                 </div>
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 mb-4">Características</h4>
-                <ul className="space-y-2 text-gray-600">
+                <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Características</h4>
+                <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                   <li>
-                    <Link href="/caracteristicas-principales" className="hover:text-[#068959] transition-colors">
+                    <Link href="/caracteristicas-principales" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                       Características principales
                     </Link>
                   </li>
                   <li>
-                    <Link href="/experiencia-profesional" className="hover:text-[#068959] transition-colors">
+                    <Link href="/experiencia-profesional" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                       Experiencia profesional
                     </Link>
                   </li>
                   <li>
-                    <Link href="/integraciones" className="hover:text-[#068959] transition-colors">
+                    <Link href="/integraciones" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                       Integraciones
                     </Link>
                   </li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
-                <ul className="space-y-2 text-gray-600">
+                <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Aprende más</h4>
+                <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                   <li>
-                    <Link href="/blog" className="hover:text-[#068959] transition-colors">
+                    <Link href="/blog" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                       Blog
                     </Link>
                   </li>
                   <li>
-                    <Link href="/casos-de-estudio" className="hover:text-[#068959] transition-colors">
+                    <Link href="/casos-de-estudio" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                       Casos de estudio
                     </Link>
                   </li>
                   <li>
-                    <Link href="/historias-de-clientes" className="hover:text-[#068959] transition-colors">
+                    <Link href="/historias-de-clientes" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                       Historias de clientes
                     </Link>
                   </li>
                   <li>
-                    <Link href="/mejores-practicas" className="hover:text-[#068959] transition-colors">
+                    <Link href="/mejores-practicas" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                       Mejores prácticas
                     </Link>
                   </li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
-                <ul className="space-y-2 text-gray-600">
+                <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Soporte</h4>
+                <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                   <li>
-                    <Link href="/contacto" className="hover:text-[#068959] transition-colors">
+                    <Link href="/contacto" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                       Contacto
                     </Link>
                   </li>
                   <li>
-                    <Link href="/soporte-tecnico" className="hover:text-[#068959] transition-colors">
+                    <Link href="/soporte-tecnico" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                       Soporte técnico
                     </Link>
                   </li>
                   <li>
-                    <Link href="/legal" className="hover:text-[#068959] transition-colors">
+                    <Link href="/legal" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                       Legal
                     </Link>
                   </li>

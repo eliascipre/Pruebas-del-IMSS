@@ -38,6 +38,16 @@ def parse_int_env(name: str, default: int) -> int:
         return default
 
 
+def parse_float_env(name: str, default: float) -> float:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def is_model_complete(model_path: str) -> bool:
     """Verifica si el modelo está completo en la ruta especificada."""
     if not os.path.isdir(model_path):
@@ -77,6 +87,60 @@ def resolve_model_path() -> str:
     return expanded_path
 
 
+def check_cuda_memory_available(min_gb: float = 3.0) -> bool:
+    """Verifica si hay suficiente memoria CUDA disponible (en GB).
+    
+    Intenta asignar un tensor de prueba para verificar la memoria realmente disponible,
+    ya que otros procesos pueden estar usando la GPU.
+    """
+    if not torch.cuda.is_available():
+        return False
+    
+    try:
+        # Obtener memoria total
+        total_memory = torch.cuda.get_device_properties(0).total_memory
+        total_gb = total_memory / (1024 ** 3)
+        
+        # Intentar asignar un tensor de prueba para verificar memoria realmente disponible
+        # Intentamos asignar al menos min_gb + 0.5 GB de margen
+        test_size_bytes = int((min_gb + 0.5) * (1024 ** 3))
+        
+        try:
+            # Limpiar caché antes de verificar
+            torch.cuda.empty_cache()
+            
+            # Intentar asignar un tensor de prueba
+            test_tensor = torch.empty(test_size_bytes // 4, dtype=torch.float32, device='cuda')
+            del test_tensor
+            torch.cuda.empty_cache()
+            
+            # Si llegamos aquí, hay suficiente memoria
+            # Calcular memoria libre aproximada
+            allocated = torch.cuda.memory_allocated(0)
+            reserved = torch.cuda.memory_reserved(0)
+            free_approx = total_memory - reserved
+            free_gb = free_approx / (1024 ** 3)
+            
+            print(f"[nv-reason-cxr] Memoria CUDA disponible: ~{free_gb:.2f} GB / {total_gb:.2f} GB (verificación exitosa)")
+            return True
+            
+        except torch.cuda.OutOfMemoryError:
+            # No hay suficiente memoria disponible
+            allocated = torch.cuda.memory_allocated(0)
+            reserved = torch.cuda.memory_reserved(0)
+            free_approx = total_memory - reserved
+            free_gb = free_approx / (1024 ** 3)
+            
+            print(f"[nv-reason-cxr] Memoria CUDA insuficiente: ~{free_gb:.2f} GB libre / {total_gb:.2f} GB total")
+            print(f"[nv-reason-cxr] No se pudo asignar {min_gb + 0.5:.2f} GB de prueba, usando CPU")
+            torch.cuda.empty_cache()
+            return False
+            
+    except Exception as e:
+        print(f"[nv-reason-cxr] Error al verificar memoria CUDA: {e}, usando CPU")
+        return False
+
+
 def load_model_and_processor():
     model_path = resolve_model_path()
     allow_downloads = get_env_flag("NV_REASON_ALLOW_DOWNLOADS", default=False)
@@ -87,12 +151,34 @@ def load_model_and_processor():
     
     local_files_only = not allow_downloads
 
-    if torch.cuda.is_available():
+    # Verificar si se fuerza CPU mediante variable de entorno (por defecto True para usar CPU/RAM)
+    force_cpu = get_env_flag("FORCE_CPU", default=True)
+    
+    # Verificar si se fuerza CUDA mediante variable de entorno
+    force_cuda = get_env_flag("FORCE_CUDA", default=False)
+    
+    # Obtener el mínimo de memoria requerida desde variable de entorno (por defecto 3 GB)
+    min_cuda_memory_gb = parse_float_env("NV_REASON_MIN_CUDA_MEMORY_GB", 3.0)
+    
+    if force_cpu or not force_cuda:
+        # Por defecto usar CPU/RAM
+        device = "cpu"
+        if force_cpu:
+            print("[nv-reason-cxr] FORCE_CPU=1 detectado, forzando uso de CPU/RAM")
+        else:
+            print("[nv-reason-cxr] Usando CPU/RAM por defecto (establece FORCE_CUDA=1 para usar GPU)")
+    elif force_cuda and torch.cuda.is_available() and check_cuda_memory_available(min_cuda_memory_gb):
         device = "cuda"
+        print("[nv-reason-cxr] FORCE_CUDA=1 detectado, usando GPU con suficiente memoria")
     elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
         device = "mps"
+        print("[nv-reason-cxr] MPS disponible, usando Apple Silicon GPU")
     else:
         device = "cpu"
+        if torch.cuda.is_available():
+            print("[nv-reason-cxr] FORCE_CUDA=1 pero memoria CUDA insuficiente, usando CPU/RAM")
+        else:
+            print("[nv-reason-cxr] Usando CPU/RAM (CUDA no disponible o memoria insuficiente)")
     bf16_checker = getattr(torch.cuda, "is_bf16_supported", None)
     is_bf16_supported = False
     if device == "cuda" and callable(bf16_checker):
@@ -156,7 +242,7 @@ SERVER_PORT = parse_int_env("PORT", parse_int_env("GRADIO_SERVER_PORT", 7860))
 SERVER_HOST = os.environ.get("HOST", os.environ.get("GRADIO_SERVER_NAME", "0.0.0.0"))
 
 
-@spaces.GPU
+# Decorador condicional: usar @spaces.GPU solo si no se fuerza CPU
 def model_inference(
     text, history, image
 ): 

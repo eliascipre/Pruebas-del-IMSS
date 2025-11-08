@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Spinner } from "@/components/ui/spinner"
+import { ThemeToggle } from "@/components/theme-toggle"
 import ProtectedRoute from "@/components/auth/protected-route"
 
 interface Message {
@@ -35,6 +36,9 @@ function ChatPageContent() {
   const [loadingConvs, setLoadingConvs] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   // Config removida
 
   const getBackendUrl = useMemo(() => {
@@ -94,6 +98,15 @@ function ChatPageContent() {
   }
 
   useEffect(() => { fetchConversations() }, [userId])
+
+  // Filtrar conversaciones basándose en el término de búsqueda
+  const filteredConversations = useMemo(() => {
+    if (!searchTerm.trim()) return conversations
+    const term = searchTerm.toLowerCase()
+    return conversations.filter(c => 
+      (c.title || '').toLowerCase().includes(term)
+    )
+  }, [conversations, searchTerm])
 
   // Normalizar contenido markdown para asegurar que las tablas se rendericen correctamente
   // Esta función es más simple y robusta, similar a cómo funciona en siem-tracker-ia
@@ -338,12 +351,26 @@ function ChatPageContent() {
       })
 
       if (!response.ok) {
-        throw new Error('Error al enviar mensaje')
+        // Intentar obtener el mensaje de error del backend
+        let errorMessage = 'Error al enviar mensaje'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.detail || errorData.error || errorMessage
+        } catch (e) {
+          // Si no se puede parsear el error, usar el mensaje por defecto
+          errorMessage = `Error ${response.status}: ${response.statusText}`
+        }
+        throw new Error(errorMessage)
       }
 
       // Recibir respuesta completa sin streaming
       const data = await response.json()
       const assistantMessage = data.response || data.analysis || ''
+      
+      // Validar que la respuesta tenga contenido
+      if (!assistantMessage || assistantMessage.trim() === '') {
+        throw new Error('El servidor no devolvió una respuesta válida')
+      }
 
       // Actualizar el mensaje del asistente con la respuesta completa
       setMessages((prev) => {
@@ -359,18 +386,29 @@ function ChatPageContent() {
       fetchConversations()
     } catch (error) {
       console.error('Error:', error)
+      
+      // Obtener mensaje de error más descriptivo
+      let errorMessage = 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.'
+      if (error instanceof Error) {
+        const errorText = error.message
+        // Si el error contiene información útil, mostrarla
+        if (errorText && errorText.length > 0 && errorText !== 'Error al enviar mensaje') {
+          errorMessage = `Error: ${errorText}`
+        }
+      }
+      
       // Actualizar el mensaje vacío del asistente con el error
       setMessages((prev) => {
         const newMessages = [...prev]
         if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'assistant' && !newMessages[newMessages.length - 1].text) {
           newMessages[newMessages.length - 1] = {
             role: 'assistant',
-            text: 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.'
+            text: errorMessage
           }
         } else {
           newMessages.push({
             role: 'assistant',
-            text: 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.'
+            text: errorMessage
           })
         }
         return newMessages
@@ -417,46 +455,111 @@ function ChatPageContent() {
     } catch (e) { console.error(e) }
   }
 
+  const handleDeleteConversation = async (conversationId: string) => {
+    if (!userId) return
+    if (!confirm('¿Estás seguro de que quieres borrar esta conversación?')) return
+    try {
+      await fetch(`${getBackendUrl()}/api/conversations/${conversationId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ user_id: userId })
+      })
+      // Si la conversación borrada es la actual, limpiar el chat
+      if (sessionId === conversationId) {
+        setMessages([])
+        setSessionId("")
+      }
+      fetchConversations()
+    } catch (e) { 
+      console.error(e)
+      alert('Error al borrar la conversación')
+    }
+  }
+
   return (
-    <div className="h-screen flex bg-gray-50 overflow-hidden">
+    <div className="h-screen flex bg-gray-50 dark:bg-gray-900 overflow-hidden">
       {/* Left Sidebar (desktop) */}
-      <div className="hidden md:flex w-80 bg-white border-r border-gray-200 flex-col">
+      <div className={`hidden md:flex bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-col transition-all duration-300 ease-in-out ${
+        sidebarCollapsed ? 'w-16' : 'w-80'
+      }`}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center gap-2 mb-4">
+        <div className={`p-6 border-b border-gray-200 dark:border-gray-800 ${sidebarCollapsed ? 'p-3' : ''}`}>
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-4`}>
+            {!sidebarCollapsed && (
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                aria-label="Ocultar menú"
+                className="text-gray-500 dark:text-gray-400 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            )}
+            {sidebarCollapsed && (
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                aria-label="Mostrar menú"
+                className="text-gray-500 dark:text-gray-400 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <div className={`flex flex-col items-center gap-3 mb-4 transition-opacity duration-300 ${
+            sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}>
             <Image
               src="/IMSS.png"
               alt="IMSS"
-              width={60}
-              height={40}
-              className="h-8 w-auto"
+              width={90}
+              height={60}
+              className="h-12 w-auto"
             />
-          </div>
-          <div className="mb-4">
             <Image
               src="/quetzalia.png"
               alt="quetzalIA.mx"
-              width={140}
-              height={40}
-              className="h-8 w-auto"
+              width={200}
+              height={60}
+              className="h-12 w-auto"
             />
           </div>
-          <Button onClick={handleNewChat} className="w-full bg-[#068959] hover:bg-[#057a4a] text-white">+ Nuevo chat</Button>
-          <div className="mt-3">
-            <Button variant="ghost" className="w-full justify-start">
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              Buscar
-            </Button>
+          <div className={`transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <Button onClick={handleNewChat} className="w-full bg-[#068959] hover:bg-[#057a4a] text-white">+ Nuevo chat</Button>
+            <div className="mt-3">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start"
+                onClick={() => setIsSearchOpen(!isSearchOpen)}
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Buscar
+              </Button>
+              {isSearchOpen && (
+                <div className="mt-2">
+                  <Input
+                    type="text"
+                    placeholder="Buscar conversaciones..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full"
+                    autoFocus
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Your conversations */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className={`flex-1 overflow-y-auto p-6 transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-900">Tus conversaciones</h3>
-            <button onClick={handleDeleteAll} className="text-xs text-blue-600 hover:text-blue-700">Borrar todo</button>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tus conversaciones</h3>
+            <button onClick={handleDeleteAll} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">Borrar todo</button>
           </div>
           
           {/* Conversation list */}
@@ -465,8 +568,11 @@ function ChatPageContent() {
             {!loadingConvs && conversations.length === 0 && (
               <p className="text-sm text-gray-500 text-center py-8">No hay conversaciones aún</p>
             )}
-            {conversations.map((c) => (
-              <div key={c.id} className={`w-full px-3 py-2 rounded hover:bg-gray-100 ${sessionId===c.id?'bg-gray-100':''}`}>
+            {!loadingConvs && searchTerm && filteredConversations.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-8">No se encontraron conversaciones</p>
+            )}
+            {filteredConversations.map((c) => (
+              <div key={c.id} className={`w-full px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 ${sessionId===c.id?'bg-gray-100 dark:bg-gray-800':''}`}>
                 <div className="flex items-center gap-2">
                   <button onClick={async () => {
                     setSessionId(c.id)
@@ -502,25 +608,40 @@ function ChatPageContent() {
                       console.error('Error cargando conversación:', e)
                     }
                   }} className="flex-1 text-left">
-                    <div className="text-sm text-gray-900">{c.title || 'Conversación'}</div>
-                    <div className="text-xs text-gray-500">{new Date((c.updated_at||0)*1000).toLocaleString()}</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{c.title || 'Conversación'}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{new Date((c.updated_at||0)*1000).toLocaleString()}</div>
                   </button>
-                  <button
-                    aria-label="Renombrar"
-                    className="text-xs text-blue-600 hover:text-blue-700"
-                    onClick={async () => {
-                      const title = prompt('Nuevo título', c.title || 'Conversación')
-                      if (!title || !title.trim()) return
-                      try {
-                        await fetch(`${getBackendUrl()}/api/conversations/${c.id}`, {
-                          method: 'PATCH',
-                          headers: getAuthHeaders(),
-                          body: JSON.stringify({ user_id: userId, title: title.trim() })
-                        })
-                        fetchConversations()
-                      } catch (e) { console.error(e) }
-                    }}
-                  >Renombrar</button>
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      aria-label="Renombrar"
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 px-2 py-1"
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        const title = prompt('Nuevo título', c.title || 'Conversación')
+                        if (!title || !title.trim()) return
+                        try {
+                          await fetch(`${getBackendUrl()}/api/conversations/${c.id}`, {
+                            method: 'PATCH',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ user_id: userId, title: title.trim() })
+                          })
+                          fetchConversations()
+                        } catch (e) { console.error(e) }
+                      }}
+                    >Renombrar</button>
+                    <button
+                      aria-label="Borrar"
+                      className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 px-2 py-1"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteConversation(c.id)
+                      }}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -528,13 +649,13 @@ function ChatPageContent() {
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200">
-          <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
+        <div className={`p-6 border-t border-gray-200 dark:border-gray-800 transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer">
             <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
               <span className="text-white text-xs font-semibold">IM</span>
             </div>
             <div className="flex-1">
-              <div className="text-sm font-semibold text-gray-900">IMSS</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">IMSS</div>
             </div>
             <svg className="w-4 h-4 text-[#068959]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -546,60 +667,152 @@ function ChatPageContent() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Navigation */}
-        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
           {/* Mobile: hamburger + logo */}
           <div className="flex md:hidden items-center justify-between">
-            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-              <SheetTrigger asChild>
-                <button aria-label="Abrir menú" className="text-gray-700 hover:text-[#068959] transition-colors">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-              </SheetTrigger>
+            <div className="flex items-center gap-3">
+              <Link href="/home" className="text-gray-700 hover:text-[#068959] transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              </Link>
+              <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                <SheetTrigger asChild>
+                  <button aria-label="Abrir menú" className="text-gray-700 hover:text-[#068959] transition-colors">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+                </SheetTrigger>
               <SheetContent side="left" className="w-72 sm:w-80 p-0">
                 {/* Sidebar content reused for mobile */}
                 <div className="flex flex-col h-full">
-                  <div className="p-6 border-b border-gray-200">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Image src="/IMSS.png" alt="IMSS" width={60} height={40} className="h-8 w-auto" />
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                    <div className="flex flex-col items-center gap-3 mb-4">
+                      <Image src="/IMSS.png" alt="IMSS" width={90} height={60} className="h-12 w-auto" />
+                      <Image src="/quetzalia.png" alt="quetzalIA.mx" width={200} height={60} className="h-12 w-auto" />
                     </div>
-                    <div className="mb-4">
-                      <Image src="/quetzalia.png" alt="quetzalIA.mx" width={140} height={40} className="h-8 w-auto" />
-                    </div>
-                    <Button className="w-full bg-[#068959] hover:bg-[#057a4a] text-white">+ Nuevo chat</Button>
+                    <Button onClick={() => {
+                      handleNewChat()
+                      setSidebarOpen(false)
+                    }} className="w-full bg-[#068959] hover:bg-[#057a4a] text-white">+ Nuevo chat</Button>
                     <div className="mt-3">
-                      <Button variant="ghost" className="w-full justify-start">
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start"
+                        onClick={() => setIsSearchOpen(!isSearchOpen)}
+                      >
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         Buscar
                       </Button>
+                      {isSearchOpen && (
+                        <div className="mt-2">
+                          <Input
+                            type="text"
+                            placeholder="Buscar conversaciones..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full"
+                            autoFocus
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex-1 overflow-y-auto p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-semibold text-gray-900">Tus conversaciones</h3>
-                      <button className="text-xs text-blue-600 hover:text-blue-700">Borrar todo</button>
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tus conversaciones</h3>
+                      <button onClick={handleDeleteAll} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">Borrar todo</button>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm text-gray-500 text-center py-8">No hay conversaciones aún</p>
+                      {loadingConvs && <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">Cargando...</p>}
+                      {!loadingConvs && conversations.length === 0 && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">No hay conversaciones aún</p>
+                      )}
+                      {!loadingConvs && searchTerm && filteredConversations.length === 0 && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">No se encontraron conversaciones</p>
+                      )}
+                      {filteredConversations.map((c) => (
+                        <div key={c.id} className={`w-full px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 ${sessionId===c.id?'bg-gray-100 dark:bg-gray-800':''}`}>
+                          <div className="flex items-center gap-2">
+                            <button onClick={async () => {
+                              setSessionId(c.id)
+                              setSidebarOpen(false)
+                              setMessages([])
+                              try {
+                                const res = await fetch(`${getBackendUrl()}/api/history?session_id=${c.id}&user_id=${userId}`, {
+                                  headers: getAuthHeaders()
+                                })
+                                if (res.ok) {
+                                  const data = await res.json()
+                                  const historyMessages: Message[] = (data.messages || [])
+                                    .filter((m: any) => m.content && m.content.trim())
+                                    .map((m: any) => ({
+                                      role: m.role === 'assistant' ? 'assistant' : 'user',
+                                      text: m.content || ''
+                                    }))
+                                  const uniqueMessages: Message[] = []
+                                  for (let i = 0; i < historyMessages.length; i++) {
+                                    const current = historyMessages[i]
+                                    const previous = uniqueMessages[uniqueMessages.length - 1]
+                                    if (!previous || previous.role !== current.role || previous.text !== current.text) {
+                                      uniqueMessages.push(current)
+                                    }
+                                  }
+                                  setMessages(uniqueMessages)
+                                }
+                              } catch (e) {
+                                console.error('Error cargando conversación:', e)
+                              }
+                            }} className="flex-1 text-left">
+                              <div className="text-sm text-gray-900 dark:text-gray-100">{c.title || 'Conversación'}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">{new Date((c.updated_at||0)*1000).toLocaleString()}</div>
+                            </button>
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                aria-label="Renombrar"
+                                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 px-2 py-1"
+                                onClick={async (e) => {
+                                  e.stopPropagation()
+                                  const title = prompt('Nuevo título', c.title || 'Conversación')
+                                  if (!title || !title.trim()) return
+                                  try {
+                                    await fetch(`${getBackendUrl()}/api/conversations/${c.id}`, {
+                                      method: 'PATCH',
+                                      headers: getAuthHeaders(),
+                                      body: JSON.stringify({ user_id: userId, title: title.trim() })
+                                    })
+                                    fetchConversations()
+                                  } catch (e) { console.error(e) }
+                                }}
+                              >Renombrar</button>
+                              <button
+                                aria-label="Borrar"
+                                className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 px-2 py-1"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteConversation(c.id)
+                                }}
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="p-6 border-t border-gray-200">
-                    <Button variant="ghost" className="w-full justify-start mb-4">
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      Configuración
-                    </Button>
-                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
+                  <div className="p-6 border-t border-gray-200 dark:border-gray-800">
+                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer">
                       <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs font-semibold">AN</span>
+                        <span className="text-white text-xs font-semibold">IM</span>
                       </div>
                       <div className="flex-1">
-                        <div className="text-sm font-semibold text-gray-900">Andrew Neilson</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">IMSS</div>
                       </div>
                       <svg className="w-4 h-4 text-[#068959]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -609,24 +822,45 @@ function ChatPageContent() {
                 </div>
               </SheetContent>
             </Sheet>
+            </div>
             <div className="flex items-center gap-2">
               <Image src="/IMSS.png" alt="IMSS" width={60} height={40} className="h-7 w-auto" />
             </div>
           </div>
           {/* Desktop links */}
-          <div className="hidden md:flex items-center justify-end gap-6 lg:gap-8">
-            <Link href="#" className="text-gray-700 hover:text-[#068959] font-medium">
-              Agentes IA
+          <div className="hidden md:flex items-center justify-between w-full">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                aria-label={sidebarCollapsed ? "Mostrar menú" : "Ocultar menú"}
+                className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <Link href="/home" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <span className="font-medium">Inicio</span>
             </Link>
-            <Link href="#" className="text-gray-700 hover:text-[#068959] font-medium">
-              Registro
-            </Link>
-            <Link href="#" className="text-gray-700 hover:text-[#068959] font-medium">
-              Nosotros
-            </Link>
-            <Link href="/metrics" className="text-gray-700 hover:text-[#068959] font-medium">
-              Métricas
-            </Link>
+            </div>
+            <div className="flex items-center gap-6 lg:gap-8">
+              <Link href="/home" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium">
+                Agentes IA
+              </Link>
+              <Link href="/login" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium">
+                Registro
+              </Link>
+              <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium">
+                Nosotros
+              </Link>
+              <Link href="/metrics" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium">
+                Métricas
+              </Link>
+              <ThemeToggle />
+            </div>
           </div>
         </div>
 
@@ -636,8 +870,8 @@ function ChatPageContent() {
             <>
               <div className="flex flex-col items-center justify-center h-full">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">¿Cómo puedo ayudarte hoy?</h2>
-                  <p className="text-gray-500 mb-6">Inicia una conversación con nuestro asistente de IA</p>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">¿Cómo puedo ayudarte hoy?</h2>
+                  <p className="text-gray-500 dark:text-gray-400 mb-6">Inicia una conversación con nuestro asistente de IA</p>
                 </div>
               </div>
             </>
@@ -647,7 +881,7 @@ function ChatPageContent() {
                 <div key={idx} className="flex gap-2 sm:gap-3">
                   <div className={`flex-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                     <div className={`inline-block px-3 py-2 sm:px-4 sm:py-2 rounded-lg ${
-                      msg.role === 'user' ? 'bg-[#068959] text-white' : 'bg-gray-100 text-gray-900'
+                      msg.role === 'user' ? 'bg-[#068959] text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                     }`}>
                       {msg.role === 'assistant' ? (
                         <div className="max-w-full leading-relaxed markdown-content overflow-x-hidden">
@@ -670,27 +904,27 @@ function ChatPageContent() {
                               components={{
                                 // Estilos para párrafos
                                 p: ({ children }: { children?: React.ReactNode }) => (
-                                  <p className="mb-2 last:mb-0 break-words text-gray-900">{children}</p>
+                                  <p className="mb-2 last:mb-0 break-words text-gray-900 dark:text-gray-100">{children}</p>
                                 ),
                                 // Estilos para encabezados
                                 h1: ({ children }: { children?: React.ReactNode }) => (
-                                  <h1 className="text-2xl font-bold mb-3 mt-4 first:mt-0 text-gray-900">{children}</h1>
+                                  <h1 className="text-2xl font-bold mb-3 mt-4 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h1>
                                 ),
                                 h2: ({ children }: { children?: React.ReactNode }) => (
-                                  <h2 className="text-xl font-bold mb-2 mt-3 first:mt-0 text-gray-900">{children}</h2>
+                                  <h2 className="text-xl font-bold mb-2 mt-3 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h2>
                                 ),
                                 h3: ({ children }: { children?: React.ReactNode }) => (
-                                  <h3 className="text-lg font-bold mb-2 mt-2 first:mt-0 text-gray-900">{children}</h3>
+                                  <h3 className="text-lg font-bold mb-2 mt-2 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h3>
                                 ),
                                 h4: ({ children }: { children?: React.ReactNode }) => (
-                                  <h4 className="text-base font-bold mb-2 mt-2 first:mt-0 text-gray-900">{children}</h4>
+                                  <h4 className="text-base font-bold mb-2 mt-2 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h4>
                                 ),
                                 // Estilos para listas
                                 ul: ({ children }: { children?: React.ReactNode }) => (
-                                  <ul className="list-disc list-inside mb-2 space-y-1 ml-4 text-gray-900">{children}</ul>
+                                  <ul className="list-disc list-inside mb-2 space-y-1 ml-4 text-gray-900 dark:text-gray-100">{children}</ul>
                                 ),
                                 ol: ({ children }: { children?: React.ReactNode }) => (
-                                  <ol className="list-decimal list-inside mb-2 space-y-1 ml-4 text-gray-900">{children}</ol>
+                                  <ol className="list-decimal list-inside mb-2 space-y-1 ml-4 text-gray-900 dark:text-gray-100">{children}</ol>
                                 ),
                                 li: ({ children }: { children?: React.ReactNode }) => (
                                   <li className="break-words">{children}</li>
@@ -700,31 +934,31 @@ function ChatPageContent() {
                                   const match = /language-(\w+)/.exec(className || "")
                                   const isInline = !match || (node as any)?.properties?.className?.includes('inline')
                                   return !isInline && match ? (
-                                    <pre className="bg-gray-800 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300">
-                                      <code className={className} {...props}>
+                                    <pre className="bg-gray-800 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300 dark:border-gray-700">
+                                      <code className={`${className} text-gray-100`} {...props}>
                                         {children}
                                       </code>
                                     </pre>
                                   ) : (
-                                    <code className="bg-gray-200 px-2 py-1 rounded text-sm font-mono border border-gray-300 text-gray-800" {...props}>
+                                    <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-sm font-mono border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200" {...props}>
                                       {children}
                                     </code>
                                   )
                                 },
                                 pre: ({ children }: { children?: React.ReactNode }) => (
-                                  <pre className="bg-gray-800 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300">
+                                  <pre className="bg-gray-800 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300 dark:border-gray-700 text-gray-100">
                                     {children}
                                   </pre>
                                 ),
                                 // Estilos para bloques de cita
                                 blockquote: ({ children }: { children?: React.ReactNode }) => (
-                                  <blockquote className="border-l-4 border-gray-400 pl-4 italic my-2 text-gray-700">
+                                  <blockquote className="border-l-4 border-gray-400 dark:border-gray-500 pl-4 italic my-2 text-gray-700 dark:text-gray-300">
                                     {children}
                                   </blockquote>
                                 ),
                                 // Estilos para texto en negrita
                                 strong: ({ children }: { children?: React.ReactNode }) => (
-                                  <strong className="font-bold text-gray-900">{children}</strong>
+                                  <strong className="font-bold text-gray-900 dark:text-gray-100">{children}</strong>
                                 ),
                                 // Estilos para texto en cursiva
                                 em: ({ children }: { children?: React.ReactNode }) => (
@@ -732,45 +966,45 @@ function ChatPageContent() {
                                 ),
                                 // Estilos para enlaces
                                 a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
-                                  <a href={href} className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
+                                  <a href={href} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">
                                     {children}
                                   </a>
                                 ),
                                 // Estilos para tablas
                                 table: ({ children, ...props }: any) => (
                                   <div className="overflow-x-auto my-4 w-full max-w-full">
-                                    <table className="min-w-full border-collapse border border-gray-300 bg-white table-auto max-w-full" {...props}>
+                                    <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 table-auto max-w-full" {...props}>
                                       {children}
                                     </table>
                                   </div>
                                 ),
                                 thead: ({ children, ...props }: any) => (
-                                  <thead className="bg-gray-100" {...props}>
+                                  <thead className="bg-gray-100 dark:bg-gray-700" {...props}>
                                     {children}
                                   </thead>
                                 ),
                                 tbody: ({ children, ...props }: any) => (
-                                  <tbody className="bg-white" {...props}>
+                                  <tbody className="bg-white dark:bg-gray-800" {...props}>
                                     {children}
                                   </tbody>
                                 ),
                                 tr: ({ children, ...props }: any) => (
-                                  <tr className="border-b border-gray-300 hover:bg-gray-50 transition-colors" {...props}>
+                                  <tr className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" {...props}>
                                     {children}
                                   </tr>
                                 ),
                                 th: ({ children, ...props }: any) => (
-                                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 bg-gray-100" {...props}>
+                                  <th className="border border-gray-300 dark:border-gray-700 px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-700" {...props}>
                                     {children}
                                   </th>
                                 ),
                                 td: ({ children, ...props }: any) => (
-                                  <td className="border border-gray-300 px-4 py-3 text-gray-900" {...props}>
+                                  <td className="border border-gray-300 dark:border-gray-700 px-4 py-3 text-gray-900 dark:text-gray-100" {...props}>
                                     {children}
                                   </td>
                                 ),
                                 hr: () => (
-                                  <hr className="my-4 border-gray-300" />
+                                  <hr className="my-4 border-gray-300 dark:border-gray-700" />
                                 ),
                               }}
                             >
@@ -792,7 +1026,7 @@ function ChatPageContent() {
         </div>
 
         {/* Input Area - Fixed */}
-        <div className="bg-white border-t border-gray-200 p-3 sm:p-4 md:p-6 flex-shrink-0">
+        <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3 sm:p-4 md:p-6 flex-shrink-0">
           <div className="max-w-3xl md:max-w-4xl mx-auto">
             <div className="flex flex-col gap-2">
               {/* Preview de imagen */}
@@ -813,7 +1047,7 @@ function ChatPageContent() {
               )}
               
               {/* Input area */}
-              <div className="flex items-center gap-2 sm:gap-3 bg-gray-50 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 focus-within:border-[#068959] transition-colors">
+              <div className="flex items-center gap-2 sm:gap-3 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 dark:border-gray-700 focus-within:border-[#068959] dark:focus-within:border-[#0dab70] transition-colors">
                 <label htmlFor="image-upload" className="cursor-pointer">
                   <svg className="w-6 h-6 text-gray-400 hover:text-[#068959]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -853,7 +1087,7 @@ function ChatPageContent() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Escribe tu mensaje o graba un audio..."
-                  className="flex-1 bg-transparent outline-none text-gray-900 placeholder-gray-400 text-sm sm:text-base"
+                  className="flex-1 bg-transparent outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm sm:text-base"
                   disabled={isLoading}
                 />
                 <button 

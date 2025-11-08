@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect, useRef } from "react"
@@ -42,9 +43,9 @@ export default function LoginPage() {
   }, [router, pathname])
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image
@@ -56,35 +57,39 @@ export default function LoginPage() {
             />
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
-            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
-            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
-            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
-            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
-            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
-            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
+            <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Legal</Link>
+            <ThemeToggle />
           </nav>
-          {/* Mobile menu */}
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <button aria-label="Abrir menú" className="md:hidden text-gray-700 hover:text-[#068959] transition-colors">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 sm:w-80">
-              <nav className="mt-8 grid gap-4 text-base">
-                <a onClick={()=>setMobileOpen(false)} href="/" className="text-gray-800 hover:text-[#068959]">Inicio</a>
-                <a onClick={()=>setMobileOpen(false)} href="/entornos" className="text-gray-800 hover:text-[#068959]">Entornos</a>
-                <a onClick={()=>setMobileOpen(false)} href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</a>
-                <a onClick={()=>setMobileOpen(false)} href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</a>
-                <a onClick={()=>setMobileOpen(false)} href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</a>
-                <a onClick={()=>setMobileOpen(false)} href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</a>
-                <a onClick={()=>setMobileOpen(false)} href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</a>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {/* Mobile menu */}
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <button aria-label="Abrir menú" className="md:hidden text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 sm:w-80 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                <nav className="mt-8 grid gap-4 text-base">
+                  <a onClick={()=>setMobileOpen(false)} href="/" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Inicio</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/entornos" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Entornos</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/integraciones" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Integraciones</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/mejores-practicas" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Mejores prácticas</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/contacto" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Contacto</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/soporte-tecnico" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Soporte técnico</a>
+                  <a onClick={()=>setMobileOpen(false)} href="/legal" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Legal</a>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
@@ -114,7 +119,7 @@ export default function LoginPage() {
           </div>
 
           {/* Right Side - White Content (50% width) */}
-          <div className="w-full lg:w-1/2 bg-white flex items-center justify-start py-16 md:py-20 lg:py-0 lg:pl-12 xl:pl-16">
+          <div className="w-full lg:w-1/2 bg-white dark:bg-gray-900 flex items-center justify-start py-16 md:py-20 lg:py-0 lg:pl-12 xl:pl-16">
             <div className="w-full max-w-lg px-6 lg:px-0 space-y-6">
               {/* Logo and Branding - Only PNG logo */}
               <div className="mb-8">
@@ -130,13 +135,13 @@ export default function LoginPage() {
               {/* Main Headline */}
               <div className="space-y-4">
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-                  <span className="text-indigo-900">IA en Imagenología:</span>
+                  <span className="text-indigo-900 dark:text-indigo-300">IA en Imagenología:</span>
                   <br />
-                  <span className="text-[#068959]">El Camino hacia la Máxima Certeza Diagnóstica.</span>
+                  <span className="text-[#068959] dark:text-[#0dab70]">El Camino hacia la Máxima Certeza Diagnóstica.</span>
                 </h1>
                 
                 {/* Description */}
-                <div className="text-base md:text-lg text-gray-700 leading-relaxed space-y-3">
+                <div className="text-base md:text-lg text-gray-700 dark:text-gray-300 leading-relaxed space-y-3">
                   <p>
                     LLM Multimodal experto en razonamiento clínico avanzado. Comprensión multimodal, generación de reportes de alta calidad, agente de triaje multi-especialidad. Experto en Dermatología, Histopatología, Oftalmología, entre otras.
                   </p>
@@ -169,12 +174,12 @@ export default function LoginPage() {
         {/* Login Modal */}
         {showLogin && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 md:p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 md:p-8">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Iniciar Sesión</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">Iniciar Sesión</h2>
                 <button
                   onClick={() => setShowLogin(false)}
-                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                  className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-2xl"
                 >
                   ×
                 </button>
@@ -187,12 +192,12 @@ export default function LoginPage() {
         {/* Register Modal */}
         {showRegister && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 md:p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 md:p-8">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Registrarse</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">Registrarse</h2>
                 <button
                   onClick={() => setShowRegister(false)}
-                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                  className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-2xl"
                 >
                   ×
                 </button>

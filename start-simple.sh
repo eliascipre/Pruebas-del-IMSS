@@ -111,10 +111,19 @@ main() {
     print_status "Iniciando todos los servicios..."
     
     # Iniciar servicios Flask con uvicorn
+    # Forzar CPU para radiografías para evitar problemas de VRAM
     start_uvicorn_service "chatbot" 5001 "servicios/chatbot" "app"
     start_uvicorn_service "educacion" 5002 "Educacion_radiografia" "app"
     start_uvicorn_service "simulacion" 5003 "Simulacion" "app"
-    start_uvicorn_service "radiografias" 5004 "radiografias_torax/backend" "app"
+    # Nota: start_uvicorn_service no permite pasar variables de entorno fácilmente
+    # Se recomienda usar start-all.sh para mejor control de variables de entorno
+    print_status "Iniciando radiografias con FORCE_CPU=1..."
+    cd "radiografias_torax/backend"
+    nohup bash -c "FORCE_CPU=1 uvicorn app:app --host 0.0.0.0 --port 5004 --reload" > "../../logs/radiografias.log" 2>&1 &
+    local pid=$!
+    echo $pid > "../../logs/radiografias.pid"
+    print_success "radiografias iniciado con PID $pid"
+    cd ../..
     
     # Esperar un poco
     sleep 3

@@ -209,12 +209,13 @@ main() {
     run_bg "simulacion" "cd Simulacion && $PYTHON_CMD app.py"
     
     # Radiografías - usa app.py con venv
+    # Forzar CPU para evitar problemas de VRAM
     PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
     VENV_PATH="$PROJECT_ROOT/../venv"
     if [ -d "$VENV_PATH" ]; then
-        run_bg "radiografias" "cd radiografias_torax/backend && source $VENV_PATH/bin/activate && $PYTHON_CMD app.py"
+        run_bg "radiografias" "cd radiografias_torax/backend && source $VENV_PATH/bin/activate && FORCE_CPU=1 $PYTHON_CMD app.py"
     else
-        run_bg "radiografias" "cd radiografias_torax/backend && $PYTHON_CMD app.py"
+        run_bg "radiografias" "cd radiografias_torax/backend && FORCE_CPU=1 $PYTHON_CMD app.py"
     fi
     
     # NOTA: NV-Reason-CXR está deshabilitado por limitaciones de VRAM

@@ -2,14 +2,15 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 import Link from "next/link"
 
 export default function CasosDeEstudio() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -23,71 +24,75 @@ export default function CasosDeEstudio() {
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
-            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
-            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
-            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
-            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
-            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
-            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
+            <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Legal</Link>
+            <ThemeToggle />
           </nav>
-          {/* Menú móvil */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <button aria-label="Abrir menú" className="md:hidden text-gray-700 hover:text-[#068959] transition-colors">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 sm:w-80">
-              <nav className="mt-8 grid gap-4 text-base">
-                <Link href="/" className="text-gray-800 hover:text-[#068959]">Inicio</Link>
-                <Link href="/entornos" className="text-gray-800 hover:text-[#068959]">Entornos</Link>
-                <Link href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</Link>
-                <Link href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</Link>
-                <Link href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</Link>
-                <Link href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</Link>
-                <Link href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {/* Menú móvil */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <button aria-label="Abrir menú" className="md:hidden text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 sm:w-80 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                <nav className="mt-8 grid gap-4 text-base">
+                  <Link href="/" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Inicio</Link>
+                  <Link href="/entornos" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Entornos</Link>
+                  <Link href="/integraciones" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Integraciones</Link>
+                  <Link href="/mejores-practicas" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Mejores prácticas</Link>
+                  <Link href="/contacto" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Contacto</Link>
+                  <Link href="/soporte-tecnico" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Soporte técnico</Link>
+                  <Link href="/legal" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Legal</Link>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
       <main className="py-12 md:py-20">
         <div className="max-w-6xl mx-auto px-6">
-          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] dark:text-[#0dab70] mb-6">
             Casos de Estudio
           </h1>
-          <p className="text-xl text-gray-600 mb-12">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-12">
             Ejemplos reales de cómo nuestra plataforma de IA está transformando la práctica médica
           </p>
           
           <div className="space-y-12">
             {/* Caso 1: Detección de Neumonía */}
-            <section className="bg-white border border-gray-200 rounded-xl p-8">
+            <section className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8">
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Caso 1: Detección Temprana de Neumonía</h2>
-                  <p className="text-gray-600">Hospital General de México - Radiología</p>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Caso 1: Detección Temprana de Neumonía</h2>
+                  <p className="text-gray-600 dark:text-gray-300">Hospital General de México - Radiología</p>
                 </div>
-                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium">
                   Éxito
                 </span>
               </div>
               
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Situación</h3>
-                  <p className="text-gray-600 leading-relaxed mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Situación</h3>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
                     Un paciente de 65 años llegó al hospital con síntomas de tos persistente y fiebre. 
                     El radiólogo de guardia necesitaba una segunda opinión para confirmar la presencia 
                     de neumonía en la radiografía de tórax.
                   </p>
                   
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Proceso</h3>
-                  <ul className="list-disc list-inside space-y-2 text-gray-600">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Proceso</h3>
+                  <ul className="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
                     <li>Se cargó la radiografía en nuestra plataforma</li>
                     <li>NV-Reason-CXR analizó la imagen y generó un reporte detallado</li>
                     <li>MedGemma proporcionó contexto clínico adicional</li>
@@ -96,15 +101,15 @@ export default function CasosDeEstudio() {
                 </div>
                 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Resultado</h3>
-                  <div className="bg-green-50 p-4 rounded-lg mb-4">
-                    <p className="text-green-800 font-medium">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Resultado</h3>
+                  <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg mb-4">
+                    <p className="text-green-800 dark:text-green-200 font-medium">
                       ✅ La IA confirmó la presencia de neumonía con 94% de confianza
                     </p>
                   </div>
                   
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Impacto</h3>
-                  <ul className="list-disc list-inside space-y-2 text-gray-600">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Impacto</h3>
+                  <ul className="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
                     <li>Tiempo de diagnóstico reducido de 2 horas a 15 minutos</li>
                     <li>Tratamiento iniciado inmediatamente</li>
                     <li>Paciente dado de alta 2 días antes de lo esperado</li>
@@ -115,26 +120,26 @@ export default function CasosDeEstudio() {
             </section>
 
             {/* Caso 2: Análisis de Múltiples Hallazgos */}
-            <section className="bg-white border border-gray-200 rounded-xl p-8">
+            <section className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8">
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Caso 2: Análisis Complejo de Múltiples Patologías</h2>
                   <p className="text-gray-600">Instituto Nacional de Enfermedades Respiratorias</p>
                 </div>
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium">
                   Complejo
                 </span>
               </div>
               
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Situación</h3>
-                  <p className="text-gray-600 leading-relaxed mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Situación</h3>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
                     Paciente con historial de EPOC que presentaba una radiografía con múltiples hallazgos 
                     que requerían análisis detallado: enfisema, fibrosis pulmonar y posible nódulo pulmonar.
                   </p>
                   
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Desafío</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Desafío</h3>
                   <p className="text-gray-600 leading-relaxed">
                     La complejidad del caso requería diferenciar entre patologías superpuestas y 
                     determinar la prioridad de cada hallazgo para el tratamiento.
@@ -142,17 +147,17 @@ export default function CasosDeEstudio() {
                 </div>
                 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Solución IA</h3>
-                  <ul className="list-disc list-inside space-y-2 text-gray-600">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Solución IA</h3>
+                  <ul className="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
                     <li>Análisis sistemático de cada región pulmonar</li>
                     <li>Identificación de 3 patologías principales</li>
                     <li>Priorización de hallazgos por gravedad</li>
                     <li>Recomendaciones de seguimiento específicas</li>
                   </ul>
                   
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Resultado</h3>
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <p className="text-blue-800 font-medium">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Resultado</h3>
+                  <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg">
+                    <p className="text-blue-800 dark:text-blue-200 font-medium">
                       📊 Análisis completo en 8 minutos vs. 45 minutos tradicionales
                     </p>
                   </div>
@@ -161,7 +166,7 @@ export default function CasosDeEstudio() {
             </section>
 
             {/* Caso 3: Educación Médica */}
-            <section className="bg-white border border-gray-200 rounded-xl p-8">
+            <section className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8">
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Caso 3: Capacitación de Residentes</h2>
@@ -174,14 +179,14 @@ export default function CasosDeEstudio() {
               
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Objetivo</h3>
-                  <p className="text-gray-600 leading-relaxed mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Objetivo</h3>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
                     Mejorar las habilidades de interpretación radiológica de residentes de primer año 
                     utilizando casos reales con retroalimentación inmediata de la IA.
                   </p>
                   
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Metodología</h3>
-                  <ul className="list-disc list-inside space-y-2 text-gray-600">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Metodología</h3>
+                  <ul className="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
                     <li>50 casos de estudio con diferentes patologías</li>
                     <li>Análisis independiente de cada residente</li>
                     <li>Comparación con análisis de IA</li>
@@ -190,15 +195,15 @@ export default function CasosDeEstudio() {
                 </div>
                 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Resultados</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Resultados</h3>
                   <div className="space-y-4">
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <p className="text-green-800 font-medium">
+                    <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg">
+                      <p className="text-green-800 dark:text-green-200 font-medium">
                         📈 40% mejora en precisión diagnóstica
                       </p>
                     </div>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <p className="text-blue-800 font-medium">
+                    <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg">
+                      <p className="text-blue-800 dark:text-blue-200 font-medium">
                         ⏱️ 60% reducción en tiempo de análisis
                       </p>
                     </div>
@@ -247,7 +252,7 @@ export default function CasosDeEstudio() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-12 md:py-16 mt-20">
+      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12 md:py-16 mt-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <div className="space-y-4 sm:col-span-2 md:col-span-1">
@@ -258,7 +263,7 @@ export default function CasosDeEstudio() {
                 height={60}
                 className="w-auto h-12 md:h-16"
               />
-              <p className="text-gray-600 text-sm">Inteligencia Artificial para la salud.</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Inteligencia Artificial para la salud.</p>
               <div className="flex items-center gap-4 pt-4">
                 <Link href="https://www.instagram.com/cipreholding/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -278,65 +283,65 @@ export default function CasosDeEstudio() {
               </div>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Características</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Características</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] transition-colors">
+                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Características principales
                   </Link>
                 </li>
                 <li>
-                  <Link href="/experiencia-profesional" className="hover:text-[#068959] transition-colors">
+                  <Link href="/experiencia-profesional" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Experiencia profesional
                   </Link>
                 </li>
                 <li>
-                  <Link href="/integraciones" className="hover:text-[#068959] transition-colors">
+                  <Link href="/integraciones" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Integraciones
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Aprende más</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/blog" className="hover:text-[#068959] transition-colors">
+                  <Link href="/blog" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="/casos-de-estudio" className="hover:text-[#068959] transition-colors">
+                  <Link href="/casos-de-estudio" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Casos de estudio
                   </Link>
                 </li>
                 <li>
-                  <Link href="/historias-de-clientes" className="hover:text-[#068959] transition-colors">
+                  <Link href="/historias-de-clientes" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Historias de clientes
                   </Link>
                 </li>
                 <li>
-                  <Link href="/mejores-practicas" className="hover:text-[#068959] transition-colors">
+                  <Link href="/mejores-practicas" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Mejores prácticas
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Soporte</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/contacto" className="hover:text-[#068959] transition-colors">
+                  <Link href="/contacto" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Contacto
                   </Link>
                 </li>
                 <li>
-                  <Link href="/soporte-tecnico" className="hover:text-[#068959] transition-colors">
+                  <Link href="/soporte-tecnico" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Soporte técnico
                   </Link>
                 </li>
                 <li>
-                  <Link href="/legal" className="hover:text-[#068959] transition-colors">
+                  <Link href="/legal" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Legal
                   </Link>
                 </li>

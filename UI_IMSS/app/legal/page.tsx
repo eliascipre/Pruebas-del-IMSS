@@ -2,15 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 import Link from "next/link"
 import ProtectedRoute from "@/components/auth/protected-route"
 
 function LegalContent() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -24,56 +25,60 @@ function LegalContent() {
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
-            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
-            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
-            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
-            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
-            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
-            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
+            <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Legal</Link>
+            <ThemeToggle />
           </nav>
-          {/* Menú móvil */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <button aria-label="Abrir menú" className="md:hidden text-gray-700 hover:text-[#068959] transition-colors">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 sm:w-80">
-              <nav className="mt-8 grid gap-4 text-base">
-                <Link href="/" className="text-gray-800 hover:text-[#068959]">Inicio</Link>
-                <Link href="/entornos" className="text-gray-800 hover:text-[#068959]">Entornos</Link>
-                <Link href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</Link>
-                <Link href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</Link>
-                <Link href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</Link>
-                <Link href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</Link>
-                <Link href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {/* Menú móvil */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <button aria-label="Abrir menú" className="md:hidden text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 sm:w-80 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                <nav className="mt-8 grid gap-4 text-base">
+                  <Link href="/" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Inicio</Link>
+                  <Link href="/entornos" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Entornos</Link>
+                  <Link href="/integraciones" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Integraciones</Link>
+                  <Link href="/mejores-practicas" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Mejores prácticas</Link>
+                  <Link href="/contacto" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Contacto</Link>
+                  <Link href="/soporte-tecnico" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Soporte técnico</Link>
+                  <Link href="/legal" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Legal</Link>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
       <main className="py-12 md:py-20">
         <div className="max-w-6xl mx-auto px-6">
-          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] dark:text-[#0dab70] mb-6">
             Términos Legales y Licencias
           </h1>
-          <p className="text-xl text-gray-600 mb-12">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-12">
             Información legal, licencias de software de terceros y descargo de responsabilidad
           </p>
           
           <div className="space-y-10 md:space-y-12">
             {/* Descargo de Responsabilidad Médica */}
-            <section className="bg-red-50 border-l-4 border-red-500 p-8 rounded-r-xl">
-              <h2 className="text-3xl font-bold text-red-800 mb-6">⚠️ Descargo de Responsabilidad Médica</h2>
+            <section className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 dark:border-red-600 p-8 rounded-r-xl">
+              <h2 className="text-3xl font-bold text-red-800 dark:text-red-300 mb-6">⚠️ Descargo de Responsabilidad Médica</h2>
               
               <div className="space-y-6">
-                <div className="bg-white p-6 rounded-lg">
-                  <h3 className="text-xl font-semibold text-red-700 mb-3">NO ES UN DISPOSITIVO MÉDICO</h3>
-                  <p className="text-gray-700 leading-relaxed">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                  <h3 className="text-xl font-semibold text-red-700 dark:text-red-400 mb-3">NO ES UN DISPOSITIVO MÉDICO</h3>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                     Este servicio es una herramienta de software para fines informativos y de investigación. 
                     <strong> No es, y no debe ser considerado, un dispositivo médico.</strong> No ha sido aprobado 
                     ni certificado por la FDA, COFEPRIS, CE ni ninguna otra agencia reguladora nacional o 
@@ -81,18 +86,18 @@ function LegalContent() {
                   </p>
                 </div>
                 
-                <div className="bg-white p-6 rounded-lg">
-                  <h3 className="text-xl font-semibold text-red-700 mb-3">NO APTO PARA DIAGNÓSTICO CLÍNICO</h3>
-                  <p className="text-gray-700 leading-relaxed">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                  <h3 className="text-xl font-semibold text-red-700 dark:text-red-400 mb-3">NO APTO PARA DIAGNÓSTICO CLÍNICO</h3>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                     La información, los análisis y los informes preliminares generados por esta plataforma 
                     <strong> no están destinados a ser utilizados para el diagnóstico, tratamiento, mitigación 
                     o prevención de ninguna enfermedad o condición médica.</strong>
                   </p>
                 </div>
                 
-                <div className="bg-white p-6 rounded-lg">
-                  <h3 className="text-xl font-semibold text-red-700 mb-3">NO REEMPLAZA EL JUICIO CLÍNICO</h3>
-                  <p className="text-gray-700 leading-relaxed">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                  <h3 className="text-xl font-semibold text-red-700 dark:text-red-400 mb-3">NO REEMPLAZA EL JUICIO CLÍNICO</h3>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                     Este servicio es un asistente de software. Toda la información y los resultados deben ser 
                     revisados, verificados e interpretados por un profesional de la salud calificado (como un 
                     radiólogo certificado), quien es el único responsable de tomar decisiones diagnósticas y 
@@ -103,17 +108,17 @@ function LegalContent() {
             </section>
 
             {/* Privacidad y Manejo de Datos */}
-            <section className="bg-blue-50 p-8 rounded-xl">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">🔒 Privacidad y Manejo de Datos (HIPAA / LFPDPPP)</h2>
+            <section className="bg-blue-50 dark:bg-blue-900/30 p-8 rounded-xl">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">🔒 Privacidad y Manejo de Datos (HIPAA / LFPDPPP)</h2>
               
               <div className="space-y-6">
-                <div className="bg-white p-6 rounded-lg">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">Compromiso con la Privacidad</h3>
-                  <p className="text-gray-700 leading-relaxed mb-4">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Compromiso con la Privacidad</h3>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
                     Nos tomamos la privacidad del paciente con la máxima seriedad. Todos los datos cargados en 
                     nuestra plataforma (imágenes y texto) son:
                   </p>
-                  <ul className="list-disc list-inside space-y-2 text-gray-700">
+                  <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
                     <li><strong>Anonimizados</strong> antes del procesamiento para proteger la identidad del paciente</li>
                     <li><strong>Cifrados en tránsito</strong> (SSL/TLS) y en reposo (AES-256)</li>
                     <li><strong>Almacenados en servidores</strong> que cumplen con la normativa HIPAA/LFPDPPP</li>
@@ -122,9 +127,9 @@ function LegalContent() {
                   </ul>
                 </div>
                 
-                <div className="bg-white p-6 rounded-lg">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">Uso de Datos</h3>
-                  <p className="text-gray-700 leading-relaxed">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Uso de Datos</h3>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                     No compartimos, vendemos ni utilizamos los datos de los pacientes para ningún fin que no sea 
                     la prestación de este servicio de análisis, de acuerdo con la Ley Federal de Protección de 
                     Datos Personales en Posesión de los Particulares (LFPDPPP) de México y las regulaciones 
@@ -147,13 +152,13 @@ function LegalContent() {
                 <div className="bg-white p-6 rounded-lg border">
                   <h3 className="text-xl font-semibold text-gray-900 mb-3">LangChain</h3>
                   <div className="space-y-3">
-                    <p className="text-gray-700">
+                    <p className="text-gray-700 dark:text-gray-300">
                       <strong>Repositorio:</strong> 
                       <a href="https://github.com/langchain-ai/langchain" target="_blank" rel="noopener noreferrer" className="text-[#068959] hover:underline ml-2">
                         github.com/langchain-ai/langchain
                       </a>
                     </p>
-                    <p className="text-gray-700">
+                    <p className="text-gray-700 dark:text-gray-300">
                       <strong>Licencia:</strong> MIT License (Permisiva para uso comercial)
                     </p>
                     <p className="text-gray-600">
@@ -168,13 +173,13 @@ function LegalContent() {
                 <div className="bg-white p-6 rounded-lg border">
                   <h3 className="text-xl font-semibold text-gray-900 mb-3">Google MedGemma</h3>
                   <div className="space-y-3">
-                    <p className="text-gray-700">
+                    <p className="text-gray-700 dark:text-gray-300">
                       <strong>Repositorio:</strong> 
                       <a href="https://huggingface.co/google/medgemma-27b-it" target="_blank" rel="noopener noreferrer" className="text-[#068959] hover:underline ml-2">
                         huggingface.co/google/medgemma-27b-it
                       </a>
                     </p>
-                    <p className="text-gray-700">
+                    <p className="text-gray-700 dark:text-gray-300">
                       <strong>Licencia:</strong> Health AI Developer Foundations Terms of Use
                     </p>
                     <div className="bg-yellow-50 p-4 rounded-lg">
@@ -193,18 +198,18 @@ function LegalContent() {
                 <div className="bg-white p-6 rounded-lg border">
                   <h3 className="text-xl font-semibold text-gray-900 mb-3">NVIDIA NV-Reason-CXR</h3>
                   <div className="space-y-3">
-                    <p className="text-gray-700">
+                    <p className="text-gray-700 dark:text-gray-300">
                       <strong>Repositorio:</strong> 
                       <a href="https://huggingface.co/nvidia/NV-Reason-CXR-3B" target="_blank" rel="noopener noreferrer" className="text-[#068959] hover:underline ml-2">
                         huggingface.co/nvidia/NV-Reason-CXR-3B
                       </a>
                     </p>
-                    <p className="text-gray-700">
+                    <p className="text-gray-700 dark:text-gray-300">
                       <strong>Licencia:</strong> NVIDIA OneWay Non-Commercial License (nsclv1)
                     </p>
-                    <div className="bg-orange-50 p-4 rounded-lg">
-                      <p className="text-orange-800 font-medium mb-2">⚠️ Licencia No Comercial:</p>
-                      <ul className="list-disc list-inside text-orange-700 space-y-1">
+                    <div className="bg-orange-50 dark:bg-orange-900/30 p-4 rounded-lg">
+                      <p className="text-orange-800 dark:text-orange-200 font-medium mb-2">⚠️ Licencia No Comercial:</p>
+                      <ul className="list-disc list-inside text-orange-700 dark:text-orange-200 space-y-1">
                         <li>Uso restringido a fines no comerciales</li>
                         <li>Prohibido el uso comercial sin autorización expresa</li>
                         <li>Requiere contacto con NVIDIA para uso comercial</li>
@@ -217,13 +222,13 @@ function LegalContent() {
             </section>
 
             {/* Términos de Servicio */}
-            <section className="bg-green-50 p-8 rounded-xl">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">📋 Términos de Servicio</h2>
+            <section className="bg-green-50 dark:bg-green-900/30 p-8 rounded-xl">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">📋 Términos de Servicio</h2>
               
               <div className="space-y-6">
-                <div className="bg-white p-6 rounded-lg">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">Uso Aceptable</h3>
-                  <ul className="list-disc list-inside space-y-2 text-gray-700">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Uso Aceptable</h3>
+                  <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
                     <li>Uso exclusivamente para fines educativos y de investigación médica</li>
                     <li>Respeto a las regulaciones de privacidad de datos médicos</li>
                     <li>Supervisión profesional en todas las aplicaciones clínicas</li>
@@ -231,12 +236,12 @@ function LegalContent() {
                   </ul>
                 </div>
                 
-                <div className="bg-white p-6 rounded-lg">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">Limitaciones de Responsabilidad</h3>
-                  <p className="text-gray-700 leading-relaxed">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Limitaciones de Responsabilidad</h3>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                     QuetzalIA y sus desarrolladores no se hacen responsables por:
                   </p>
-                  <ul className="list-disc list-inside space-y-2 text-gray-700 mt-3">
+                  <ul className="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300 mt-3">
                     <li>Decisiones médicas basadas en los resultados de la plataforma</li>
                     <li>Pérdida de datos o interrupciones del servicio</li>
                     <li>Interpretaciones incorrectas de los análisis generados</li>
@@ -244,9 +249,9 @@ function LegalContent() {
                   </ul>
                 </div>
                 
-                <div className="bg-white p-6 rounded-lg">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">Modificaciones</h3>
-                  <p className="text-gray-700 leading-relaxed">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">Modificaciones</h3>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                     Nos reservamos el derecho de modificar estos términos en cualquier momento. 
                     Los cambios serán notificados a través de la plataforma y entrarán en vigor 
                     inmediatamente después de su publicación.
@@ -286,7 +291,7 @@ function LegalContent() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-12 md:py-16 mt-20">
+      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12 md:py-16 mt-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <div className="space-y-4 sm:col-span-2 md:col-span-1">
@@ -297,7 +302,7 @@ function LegalContent() {
                 height={60}
                 className="w-auto h-12 md:h-16"
               />
-              <p className="text-gray-600 text-sm">Inteligencia Artificial para la salud.</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Inteligencia Artificial para la salud.</p>
               <div className="flex items-center gap-4 pt-4">
                 <Link href="https://www.instagram.com/cipreholding/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -317,65 +322,65 @@ function LegalContent() {
               </div>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Características</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Características</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] transition-colors">
+                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Características principales
                   </Link>
                 </li>
                 <li>
-                  <Link href="/experiencia-profesional" className="hover:text-[#068959] transition-colors">
+                  <Link href="/experiencia-profesional" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Experiencia profesional
                   </Link>
                 </li>
                 <li>
-                  <Link href="/integraciones" className="hover:text-[#068959] transition-colors">
+                  <Link href="/integraciones" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Integraciones
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Aprende más</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/blog" className="hover:text-[#068959] transition-colors">
+                  <Link href="/blog" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="/casos-de-estudio" className="hover:text-[#068959] transition-colors">
+                  <Link href="/casos-de-estudio" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Casos de estudio
                   </Link>
                 </li>
                 <li>
-                  <Link href="/historias-de-clientes" className="hover:text-[#068959] transition-colors">
+                  <Link href="/historias-de-clientes" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Historias de clientes
                   </Link>
                 </li>
                 <li>
-                  <Link href="/mejores-practicas" className="hover:text-[#068959] transition-colors">
+                  <Link href="/mejores-practicas" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Mejores prácticas
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Soporte</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/contacto" className="hover:text-[#068959] transition-colors">
+                  <Link href="/contacto" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Contacto
                   </Link>
                 </li>
                 <li>
-                  <Link href="/soporte-tecnico" className="hover:text-[#068959] transition-colors">
+                  <Link href="/soporte-tecnico" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Soporte técnico
                   </Link>
                 </li>
                 <li>
-                  <Link href="/legal" className="hover:text-[#068959] transition-colors">
+                  <Link href="/legal" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Legal
                   </Link>
                 </li>

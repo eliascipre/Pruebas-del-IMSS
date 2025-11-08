@@ -2,14 +2,15 @@
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Image from "next/image"
 import Link from "next/link"
 
 export default function HistoriasDeClientes() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -23,62 +24,66 @@ export default function HistoriasDeClientes() {
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link href="/" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Inicio</Link>
-            <Link href="/entornos" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Entornos</Link>
-            <Link href="/integraciones" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Integraciones</Link>
-            <Link href="/mejores-practicas" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Mejores prácticas</Link>
-            <Link href="/contacto" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Contacto</Link>
-            <Link href="/soporte-tecnico" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Soporte técnico</Link>
-            <Link href="/legal" className="text-gray-700 hover:text-[#068959] font-medium transition-colors">Legal</Link>
+            <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Inicio</Link>
+            <Link href="/entornos" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Entornos</Link>
+            <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Integraciones</Link>
+            <Link href="/mejores-practicas" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Mejores prácticas</Link>
+            <Link href="/contacto" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Contacto</Link>
+            <Link href="/soporte-tecnico" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Soporte técnico</Link>
+            <Link href="/legal" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Legal</Link>
+            <ThemeToggle />
           </nav>
-          {/* Menú móvil */}
-          <Sheet>
-            <SheetTrigger asChild>
-              <button aria-label="Abrir menú" className="md:hidden text-gray-700 hover:text-[#068959] transition-colors">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 sm:w-80">
-              <nav className="mt-8 grid gap-4 text-base">
-                <Link href="/" className="text-gray-800 hover:text-[#068959]">Inicio</Link>
-                <Link href="/entornos" className="text-gray-800 hover:text-[#068959]">Entornos</Link>
-                <Link href="/integraciones" className="text-gray-800 hover:text-[#068959]">Integraciones</Link>
-                <Link href="/mejores-practicas" className="text-gray-800 hover:text-[#068959]">Mejores prácticas</Link>
-                <Link href="/contacto" className="text-gray-800 hover:text-[#068959]">Contacto</Link>
-                <Link href="/soporte-tecnico" className="text-gray-800 hover:text-[#068959]">Soporte técnico</Link>
-                <Link href="/legal" className="text-gray-800 hover:text-[#068959]">Legal</Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {/* Menú móvil */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <button aria-label="Abrir menú" className="md:hidden text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72 sm:w-80 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                <nav className="mt-8 grid gap-4 text-base">
+                  <Link href="/" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Inicio</Link>
+                  <Link href="/entornos" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Entornos</Link>
+                  <Link href="/integraciones" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Integraciones</Link>
+                  <Link href="/mejores-practicas" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Mejores prácticas</Link>
+                  <Link href="/contacto" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Contacto</Link>
+                  <Link href="/soporte-tecnico" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Soporte técnico</Link>
+                  <Link href="/legal" className="text-gray-800 dark:text-gray-200 hover:text-[#068959] dark:hover:text-[#0dab70]">Legal</Link>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </header>
 
       <main className="py-12 md:py-20">
         <div className="max-w-6xl mx-auto px-6">
-          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-[#068959] dark:text-[#0dab70] mb-6">
             Historias de Clientes
           </h1>
-          <p className="text-xl text-gray-600 mb-12">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-12">
             Testimonios reales de profesionales de la salud que han transformado su práctica con nuestra plataforma
           </p>
           
           <div className="space-y-12">
             {/* Testimonio 1 */}
-            <section className="bg-white border border-gray-200 rounded-xl p-8">
+            <section className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8">
               <div className="flex items-start gap-6">
                 <div className="w-20 h-20 bg-gradient-to-r from-[#068959] to-[#057a4a] rounded-full flex items-center justify-center text-white text-2xl font-bold">
                   DR
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-4 mb-4">
-                    <h3 className="text-xl font-semibold text-gray-900">Dr. Carlos Mendoza</h3>
-                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Dr. Carlos Mendoza</h3>
+                    <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium">
                       Radiólogo
                     </span>
                   </div>
-                  <p className="text-gray-600 mb-2">Hospital General de México</p>
+                  <p className="text-gray-600 dark:text-gray-300 mb-2">Hospital General de México</p>
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(5)].map((_, i) => (
                       <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
@@ -86,14 +91,14 @@ export default function HistoriasDeClientes() {
                       </svg>
                     ))}
                   </div>
-                  <blockquote className="text-gray-700 italic leading-relaxed">
+                  <blockquote className="text-gray-700 dark:text-gray-300 italic leading-relaxed">
                     "La plataforma de QuetzalIA ha revolucionado completamente mi práctica diaria. 
                     Lo que antes me tomaba 30-45 minutos analizar una radiografía compleja, ahora 
                     lo puedo hacer en 5-10 minutos con mayor precisión. La capacidad de la IA para 
                     explicar su razonamiento paso a paso me ha ayudado a mejorar mis propias habilidades 
                     diagnósticas."
                   </blockquote>
-                  <div className="mt-4 text-sm text-gray-500">
+                  <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                     <p><strong>Resultado:</strong> 60% reducción en tiempo de análisis, 25% mejora en precisión diagnóstica</p>
                   </div>
                 </div>
@@ -101,19 +106,19 @@ export default function HistoriasDeClientes() {
             </section>
 
             {/* Testimonio 2 */}
-            <section className="bg-white border border-gray-200 rounded-xl p-8">
+            <section className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8">
               <div className="flex items-start gap-6">
                 <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
                   DM
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-4 mb-4">
-                    <h3 className="text-xl font-semibold text-gray-900">Dra. María Elena Rodríguez</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Dra. María Elena Rodríguez</h3>
                     <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
                       Neumóloga
                     </span>
                   </div>
-                  <p className="text-gray-600 mb-2">Instituto Nacional de Enfermedades Respiratorias</p>
+                  <p className="text-gray-600 dark:text-gray-300 mb-2">Instituto Nacional de Enfermedades Respiratorias</p>
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(5)].map((_, i) => (
                       <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
@@ -121,13 +126,13 @@ export default function HistoriasDeClientes() {
                       </svg>
                     ))}
                   </div>
-                  <blockquote className="text-gray-700 italic leading-relaxed">
+                  <blockquote className="text-gray-700 dark:text-gray-300 italic leading-relaxed">
                     "Como neumóloga, necesito analizar cientos de radiografías semanalmente. 
                     QuetzalIA no solo me ayuda a ser más eficiente, sino que también me ha enseñado 
                     a reconocer patrones que antes pasaba por alto. La integración con MedGemma 
                     es especialmente valiosa para casos complejos donde necesito contexto clínico adicional."
                   </blockquote>
-                  <div className="mt-4 text-sm text-gray-500">
+                  <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                     <p><strong>Resultado:</strong> 200+ radiografías analizadas semanalmente, 40% mejora en detección temprana</p>
                   </div>
                 </div>
@@ -135,19 +140,19 @@ export default function HistoriasDeClientes() {
             </section>
 
             {/* Testimonio 3 */}
-            <section className="bg-white border border-gray-200 rounded-xl p-8">
+            <section className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8">
               <div className="flex items-start gap-6">
                 <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
                   DR
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-4 mb-4">
-                    <h3 className="text-xl font-semibold text-gray-900">Dr. Roberto Silva</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Dr. Roberto Silva</h3>
                     <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
                       Director Médico
                     </span>
                   </div>
-                  <p className="text-gray-600 mb-2">Clínica Privada del Valle</p>
+                  <p className="text-gray-600 dark:text-gray-300 mb-2">Clínica Privada del Valle</p>
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(5)].map((_, i) => (
                       <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
@@ -155,13 +160,13 @@ export default function HistoriasDeClientes() {
                       </svg>
                     ))}
                   </div>
-                  <blockquote className="text-gray-700 italic leading-relaxed">
+                  <blockquote className="text-gray-700 dark:text-gray-300 italic leading-relaxed">
                     "Implementar QuetzalIA en nuestra clínica fue una de las mejores decisiones 
                     que hemos tomado. No solo hemos mejorado la calidad de nuestros diagnósticos, 
                     sino que también hemos reducido significativamente los tiempos de espera para 
                     nuestros pacientes. El ROI se vio reflejado en los primeros 3 meses."
                   </blockquote>
-                  <div className="mt-4 text-sm text-gray-500">
+                  <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                     <p><strong>Resultado:</strong> 50% reducción en tiempos de espera, 35% mejora en satisfacción del paciente</p>
                   </div>
                 </div>
@@ -169,19 +174,19 @@ export default function HistoriasDeClientes() {
             </section>
 
             {/* Testimonio 4 */}
-            <section className="bg-white border border-gray-200 rounded-xl p-8">
+            <section className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-8">
               <div className="flex items-start gap-6">
                 <div className="w-20 h-20 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
                   DR
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-4 mb-4">
-                    <h3 className="text-xl font-semibold text-gray-900">Dra. Ana Patricia López</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Dra. Ana Patricia López</h3>
                     <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
                       Residente
                     </span>
                   </div>
-                  <p className="text-gray-600 mb-2">Hospital Universitario - Programa de Radiología</p>
+                  <p className="text-gray-600 dark:text-gray-300 mb-2">Hospital Universitario - Programa de Radiología</p>
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(5)].map((_, i) => (
                       <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
@@ -189,13 +194,13 @@ export default function HistoriasDeClientes() {
                       </svg>
                     ))}
                   </div>
-                  <blockquote className="text-gray-700 italic leading-relaxed">
+                  <blockquote className="text-gray-700 dark:text-gray-300 italic leading-relaxed">
                     "Como residente, QuetzalIA ha sido mi mejor herramienta de aprendizaje. 
                     La capacidad de ver el razonamiento paso a paso de la IA me ha ayudado a 
                     entender mejor los patrones radiológicos. Es como tener un tutor personal 
                     disponible 24/7. Mis calificaciones han mejorado significativamente."
                   </blockquote>
-                  <div className="mt-4 text-sm text-gray-500">
+                  <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                     <p><strong>Resultado:</strong> 85% mejora en calificaciones, 90% satisfacción con el aprendizaje</p>
                   </div>
                 </div>
@@ -237,7 +242,7 @@ export default function HistoriasDeClientes() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-12 md:py-16 mt-20">
+      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12 md:py-16 mt-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <div className="space-y-4 sm:col-span-2 md:col-span-1">
@@ -248,7 +253,7 @@ export default function HistoriasDeClientes() {
                 height={60}
                 className="w-auto h-12 md:h-16"
               />
-              <p className="text-gray-600 text-sm">Inteligencia Artificial para la salud.</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Inteligencia Artificial para la salud.</p>
               <div className="flex items-center gap-4 pt-4">
                 <Link href="https://www.instagram.com/cipreholding/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#068959] transition-colors">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -268,65 +273,65 @@ export default function HistoriasDeClientes() {
               </div>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Características</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Características</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] transition-colors">
+                  <Link href="/caracteristicas-principales" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Características principales
                   </Link>
                 </li>
                 <li>
-                  <Link href="/experiencia-profesional" className="hover:text-[#068959] transition-colors">
+                  <Link href="/experiencia-profesional" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Experiencia profesional
                   </Link>
                 </li>
                 <li>
-                  <Link href="/integraciones" className="hover:text-[#068959] transition-colors">
+                  <Link href="/integraciones" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Integraciones
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Aprende más</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Aprende más</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/blog" className="hover:text-[#068959] transition-colors">
+                  <Link href="/blog" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="/casos-de-estudio" className="hover:text-[#068959] transition-colors">
+                  <Link href="/casos-de-estudio" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Casos de estudio
                   </Link>
                 </li>
                 <li>
-                  <Link href="/historias-de-clientes" className="hover:text-[#068959] transition-colors">
+                  <Link href="/historias-de-clientes" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Historias de clientes
                   </Link>
                 </li>
                 <li>
-                  <Link href="/mejores-practicas" className="hover:text-[#068959] transition-colors">
+                  <Link href="/mejores-practicas" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Mejores prácticas
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-900 mb-4">Soporte</h4>
-              <ul className="space-y-2 text-gray-600">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Soporte</h4>
+              <ul className="space-y-2 text-gray-600 dark:text-gray-400">
                 <li>
-                  <Link href="/contacto" className="hover:text-[#068959] transition-colors">
+                  <Link href="/contacto" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Contacto
                   </Link>
                 </li>
                 <li>
-                  <Link href="/soporte-tecnico" className="hover:text-[#068959] transition-colors">
+                  <Link href="/soporte-tecnico" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Soporte técnico
                   </Link>
                 </li>
                 <li>
-                  <Link href="/legal" className="hover:text-[#068959] transition-colors">
+                  <Link href="/legal" className="hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors">
                     Legal
                   </Link>
                 </li>

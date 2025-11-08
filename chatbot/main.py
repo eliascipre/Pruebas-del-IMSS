@@ -14,6 +14,7 @@ import logging
 import asyncio
 import os
 import time
+import html
 
 # Importar módulos
 from memory_manager import get_memory_manager
@@ -23,7 +24,9 @@ from medical_analysis import analyze_image_with_fallback
 from transcription_service import transcribe_audio
 from auth_manager import get_auth_manager
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Request
+from security_llm import get_security_manager
+from optimizations import get_rate_limiter
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -67,6 +70,8 @@ app.add_middleware(
 memory_manager = get_memory_manager()
 auth_manager = get_auth_manager()
 security = HTTPBearer()
+security_manager = get_security_manager()
+rate_limiter = get_rate_limiter()
 
 # Configurar endpoint de vLLM desde variables de entorno
 # Prioridad: VLLM_ENDPOINT > OLLAMA_ENDPOINT > LM_STUDIO_URL (para compatibilidad)
@@ -245,14 +250,35 @@ async def get_current_user_info(user: Dict[str, Any] = Depends(require_auth)):
 
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require_auth)):
+async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require_auth), request: Request = None):
     """Endpoint principal para chat con soporte de imágenes y streaming - Requiere autenticación"""
     try:
+        # Rate limiting por usuario
+        user_id = user.get('user_id') or user.get('id', 'unknown')
+        # Obtener IP del cliente (FastAPI inyecta Request automáticamente)
+        client_ip = request.client.host if request and request.client else 'unknown'
+        
+        # Aplicar rate limiting
+        if not rate_limiter.is_allowed(client_ip):
+            remaining = rate_limiter.get_remaining(client_ip)
+            raise HTTPException(
+                status_code=429,
+                detail=f"Demasiadas peticiones. Intenta de nuevo en un momento. Peticiones restantes: {remaining}"
+            )
+        
         logger.info(f"📥 Nuevo mensaje - User: {user.get('email')}, Session: {req.session_id}, Tiene imagen: {req.image is not None}")
         
         # Validar que haya mensaje o imagen
         if not req.message and not req.image:
             raise HTTPException(status_code=400, detail="Message or image is required")
+        
+        # Validar y sanitizar entrada del usuario (LLM01: Inyección de Prompts)
+        if req.message:
+            is_valid, sanitized, error = security_manager.validate_input(req.message)
+            if not is_valid:
+                logger.warning(f"⚠️ Intento de inyección de prompts bloqueado para usuario {user.get('email')}: {error}")
+                raise HTTPException(status_code=400, detail=error)
+            req.message = sanitized
         
         # Generar session_id si no existe
         session_id = req.session_id or str(uuid.uuid4())
@@ -326,8 +352,12 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
                 except Exception as _e:
                     logger.warning(f"⚠️ No se pudieron registrar métricas (imagen): {_e}")
 
+                # Validar y sanitizar salida (LLM05: Manejo Inadecuado de Salidas, LLM07: Filtración de Prompts)
+                raw_response = analysis_result.get('analysis', '')
+                validated_response = security_manager.validate_output(raw_response)
+                
                 return ChatResponse(
-                    response=analysis_result.get('analysis', ''),
+                    response=validated_response,
                     session_id=session_id,
                     is_image_analysis=True,
                     model_used=analysis_result.get('model', 'unknown'),
@@ -399,8 +429,12 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
                     )
                 except Exception as _e:
                     logger.warning(f"⚠️ No se pudieron registrar métricas (json): {_e}")
+                # Validar y sanitizar salida JSON
+                raw_response = json.dumps(result_json, ensure_ascii=False)
+                validated_response = security_manager.validate_output(raw_response)
+                
                 return ChatResponse(
-                    response=json.dumps(result_json, ensure_ascii=False),
+                    response=validated_response,
                     session_id=session_id
                 )
             else:
@@ -441,8 +475,11 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
                 except Exception as _e:
                     logger.warning(f"⚠️ No se pudieron registrar métricas (texto): {_e}")
                 
+                # Validar y sanitizar salida (LLM05: Manejo Inadecuado de Salidas, LLM07: Filtración de Prompts)
+                validated_response = security_manager.validate_output(response)
+                
                 return ChatResponse(
-                    response=response,
+                    response=validated_response,
                     session_id=session_id
                 )
             
@@ -485,6 +522,10 @@ async def process_text_stream(message: str, session_id: str):
                     chunk_str = str(chunk) if not isinstance(chunk, str) else chunk
                     full_response += chunk_str
                     
+                    # Validar chunk individual (sanitización básica)
+                    # Nota: La validación completa se hace al final del stream
+                    chunk_str = html.escape(chunk_str) if chunk_str else ""
+                    
                     # Enviar chunk como SSE con encoding UTF-8
                     # Formato: data: {"content": "chunk", "done": false}\n\n
                     chunk_data = json.dumps({'content': chunk_str, 'done': False}, ensure_ascii=False)
@@ -497,9 +538,12 @@ async def process_text_stream(message: str, session_id: str):
         
         logger.info(f"✅ Streaming completado: {chunk_count} chunks, {len(full_response)} caracteres totales")
         
+        # Validar y sanitizar respuesta completa (LLM05, LLM07)
+        validated_response = security_manager.validate_output(full_response)
+        
         # Persistir respuesta completa al finalizar el stream
         try:
-            memory_manager.add_message_to_conversation(session_id, "assistant", full_response, {"stream": True})
+            memory_manager.add_message_to_conversation(session_id, "assistant", validated_response, {"stream": True})
             logger.debug(f"💾 Respuesta persistida para sesión {session_id[:8]}")
         except Exception as persist_err:
             logger.error(f"❌ Error persistiendo respuesta: {persist_err}", exc_info=True)
@@ -700,6 +744,25 @@ async def rename_conversation(session_id: str, req: ConversationRenameRequest):
         raise
     except Exception as e:
         logger.error(f"❌ Error renombrando conversación: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ConversationDeleteRequest(BaseModel):
+    user_id: str
+
+
+@app.delete("/api/conversations/{session_id}")
+async def delete_conversation(session_id: str, req: ConversationDeleteRequest):
+    """Eliminar una conversación individual"""
+    try:
+        ok = memory_manager.delete_conversation(session_id=session_id, user_id=req.user_id)
+        if not ok:
+            raise HTTPException(status_code=403, detail="Forbidden or not found")
+        return {"session_id": session_id, "deleted": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error eliminando conversación: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
