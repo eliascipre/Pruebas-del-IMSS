@@ -128,7 +128,7 @@ show_status() {
     echo "📊 ESTADO DE LOS SERVICIOS"
     echo "=========================================="
     
-    local services=("Gateway:3001" "Chatbot:5001" "Educacion:5002" "Simulacion:5003" "Radiografias:5004" "NV-Reason-CXR:5005")
+    local services=("Gateway:3001" "Chatbot:5001" "Educacion:5002" "Simulacion:5003" "Radiografias:5004" "NV-Reason-CXR:7860")
     
     for service in "${services[@]}"; do
         local name=$(echo $service | cut -d: -f1)
@@ -167,7 +167,7 @@ cleanup() {
     done
     
     # Matar procesos por puerto como respaldo (incluir 3001 para gateway)
-    for port in 3001 3000 5001 5002 5003 5004 5005; do
+    for port in 3001 3000 5001 5002 5003 5004 7860; do
         kill_port $port
     done
     
@@ -239,11 +239,21 @@ main() {
         run_bg "chatbot" "cd chatbot && $PYTHON_CMD main.py"
     fi
     
-    # Educación - usa app.py
-    run_bg "educacion" "cd Educacion_radiografia && $PYTHON_CMD app.py"
+    # Educación - usa app.py con venv
+    # VENV_PATH ya está definido arriba
+    if [ -d "$VENV_PATH" ]; then
+        run_bg "educacion" "cd Educacion_radiografia && source $VENV_PATH/bin/activate && $PYTHON_CMD app.py"
+    else
+        run_bg "educacion" "cd Educacion_radiografia && $PYTHON_CMD app.py"
+    fi
     
-    # Simulación - usa app.py
-    run_bg "simulacion" "cd Simulacion && $PYTHON_CMD app.py"
+    # Simulación - usa app.py con venv
+    # VENV_PATH ya está definido arriba
+    if [ -d "$VENV_PATH" ]; then
+        run_bg "simulacion" "cd Simulacion && source $VENV_PATH/bin/activate && $PYTHON_CMD app.py"
+    else
+        run_bg "simulacion" "cd Simulacion && $PYTHON_CMD app.py"
+    fi
     
     # Radiografías - usa app.py con venv
     # VENV_PATH ya está definido arriba
@@ -254,23 +264,28 @@ main() {
         run_bg "radiografias" "cd radiografias_torax/backend && FORCE_CPU=1 $PYTHON_CMD app.py"
     fi
     
-    # NV-Reason-CXR - Gradio service (usar venv si existe, sin token requerido)
+    # NV-Reason-CXR - FastAPI service (usar venv si existe)
     # VENV_PATH ya está definido arriba
     NV_REASON_DIR="$PROJECT_ROOT/nv-reason-cxr"
 
     NV_REASON_MODEL_RESOLVED="$(resolve_nv_reason_model_path || true)"
     if [ -n "$NV_REASON_MODEL_RESOLVED" ]; then
         print_status "Modelo NV-Reason-CXR local detectado: $NV_REASON_MODEL_RESOLVED"
-        NV_REASON_ALLOW_DEFAULT=0
     else
-        print_warning "No se detecto copia local del modelo NV-Reason-CXR-3B. Se permitira descarga si es necesaria."
-        NV_REASON_ALLOW_DEFAULT=1
+        print_warning "No se detecto copia local del modelo NV-Reason-CXR-3B. Se descargara si es necesario."
     fi
 
-    NV_REASON_ALLOW_DOWNLOADS_VALUE="${NV_REASON_ALLOW_DOWNLOADS:-$NV_REASON_ALLOW_DEFAULT}"
+    # Configurar variables de entorno para api_server.py
+    # Puerto por defecto: 7860 (puede cambiarse con PORT=5005 si se necesita)
+    NV_REASON_PORT="${NV_REASON_PORT:-7860}"
     # Forzar CPU para evitar problemas de VRAM
-    NV_REASON_ENV_CMD="PORT=5005 FORCE_CPU=1 NV_REASON_ALLOW_DOWNLOADS=$NV_REASON_ALLOW_DOWNLOADS_VALUE"
+    NV_REASON_ENV_CMD="PORT=$NV_REASON_PORT HOST=0.0.0.0 FORCE_CPU=1"
 
+    # Configurar endpoint de traducción (MedGemma/VLLM)
+    VLLM_ENDPOINT="${VLLM_ENDPOINT:-http://localhost:8000/v1/}"
+    NV_REASON_ENV_CMD="$NV_REASON_ENV_CMD VLLM_ENDPOINT=$VLLM_ENDPOINT"
+
+    # Configurar ruta del modelo
     if [ -n "$NV_REASON_MODEL_RESOLVED" ]; then
         local model_path_escaped
         model_path_escaped=$(printf '%q' "$NV_REASON_MODEL_RESOLVED")
@@ -279,16 +294,18 @@ main() {
         NV_REASON_ENV_CMD="$NV_REASON_ENV_CMD MODEL=nvidia/NV-Reason-CXR-3B"
     fi
 
-    if [ "$NV_REASON_ALLOW_DOWNLOADS_VALUE" = "1" ]; then
-        print_warning "NV-Reason-CXR puede requerir conexion para descargar el modelo si no esta en cache."
-    else
-        print_status "NV-Reason-CXR operara en modo offline usando archivos locales."
+    # Configurar ruta de base de datos (opcional)
+    if [ -n "${NV_REASON_DB_PATH:-}" ]; then
+        NV_REASON_ENV_CMD="$NV_REASON_ENV_CMD NV_REASON_DB_PATH=$NV_REASON_DB_PATH"
     fi
 
+    print_status "NV-Reason-CXR se iniciara en el puerto $NV_REASON_PORT"
+
+    # Ejecutar api_server.py directamente
     if [ -d "$VENV_PATH" ]; then
-        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && source $VENV_PATH/bin/activate && $NV_REASON_ENV_CMD bash run_local.sh --skip-venv"
+        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && source $VENV_PATH/bin/activate && $NV_REASON_ENV_CMD $PYTHON_CMD api_server.py"
     else
-        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && $NV_REASON_ENV_CMD bash run_local.sh --skip-venv"
+        run_bg "nv-reason-cxr" "cd $NV_REASON_DIR && $NV_REASON_ENV_CMD $PYTHON_CMD api_server.py"
     fi
     
     # Esperar un poco para que los servicios se inicien
@@ -308,7 +325,7 @@ main() {
     wait_for_service "http://localhost:5002/api/health" "Educación" || true
     wait_for_service "http://localhost:5003/api/health" "Simulación" || true
     wait_for_service "http://localhost:5004/api/health" "Radiografías" || true
-    wait_for_service "http://localhost:5005" "NV-Reason-CXR" || true
+    wait_for_service "http://localhost:7860/docs" "NV-Reason-CXR" || true
     
     # Detectar puerto real del gateway (Next.js puede usar otro puerto si 3000 está ocupado)
     GATEWAY_PORT=""
@@ -336,7 +353,7 @@ main() {
     echo "   Educación:     http://localhost:5002"
     echo "   Simulación:    http://localhost:5003"
     echo "   Radiografías:  http://localhost:5004"
-    echo "   NV-Reason-CXR: http://localhost:5005"
+    echo "   NV-Reason-CXR: http://localhost:7860 (API: http://localhost:7860/docs)"
     echo ""
     echo "🌐 URLs de acceso RED LOCAL:"
     echo "   Gateway:        http://$LOCAL_IP:$GATEWAY_PORT"
@@ -344,7 +361,7 @@ main() {
     echo "   Educación:     http://$LOCAL_IP:5002"
     echo "   Simulación:    http://$LOCAL_IP:5003"
     echo "   Radiografías:  http://$LOCAL_IP:5004"
-    echo "   NV-Reason-CXR: http://$LOCAL_IP:5005"
+    echo "   NV-Reason-CXR: http://$LOCAL_IP:7860 (API: http://$LOCAL_IP:7860/docs)"
     echo ""
     echo "📊 Para ver logs: tail -f logs/[servicio].log"
     echo "🛑 Para detener: ./stop-all.sh"
@@ -362,7 +379,7 @@ main() {
         sleep 60
         # Verificar que todos los servicios sigan activos
         local all_active=true
-        for port in 3001 5001 5002 5003 5004 5005; do
+        for port in 3001 5001 5002 5003 5004 7860; do
             if ! check_port $port; then
                 all_active=false
                 break
