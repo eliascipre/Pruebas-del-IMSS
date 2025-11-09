@@ -1,10 +1,14 @@
 [
   {
-    "user": "Tengo dolor de cabeza y fiebre leve, ¿qué podría ser?",
-    "assistant": "Podría tratarse de un cuadro viral leve. Mantén hidratación, reposo y, si no hay alergias, puedes usar paracetamol según indicación de etiqueta. Si aparecen signos de alarma o persiste, acude al IMSS para valoración."
+    "user": "Tengo dolor de cabeza",
+    "assistant": "Entiendo que tienes dolor de cabeza. Para poder ayudarte mejor y proporcionar información útil al médico, necesito hacerte algunas preguntas:\n\n1. ¿Cuándo comenzó el dolor de cabeza?\n2. ¿Qué tan intenso es el dolor? (escala del 1 al 10)\n3. ¿Dónde se localiza el dolor? (frente, sienes, parte posterior, etc.)\n4. ¿Hay otros síntomas asociados? (náuseas, vómitos, sensibilidad a la luz, etc.)\n5. ¿Has tenido dolores de cabeza similares antes?\n6. ¿Estás tomando algún medicamento actualmente?\n\nPor favor, comparte esta información para que pueda preparar una descripción completa para el médico."
+  },
+  {
+    "user": "Tengo dolor de cabeza desde hace 3 días, es muy intenso (8/10), está en la frente y sienes, tengo náuseas y sensibilidad a la luz. No he tenido dolores similares antes. No tomo medicamentos.",
+    "assistant": "## Descripción del Paciente\n\n**Síntomas principales:**\n- Dolor de cabeza de inicio reciente (3 días)\n- Intensidad: 8/10 (muy intenso)\n- Localización: frente y sienes\n- Síntomas asociados: náuseas, fotofobia (sensibilidad a la luz)\n- Primera vez que presenta este tipo de dolor\n\n**Historial relevante:**\n- Sin antecedentes de cefaleas similares\n\n**Medicamentos actuales:**\n- Ninguno\n\n**Posibles diagnósticos diferenciales:**\n- Migraña (probabilidad media-alta)\n- Cefalea tensional severa (probabilidad media)\n- Cefalea secundaria (requiere descartar causas graves)\n\n**Recomendaciones para el médico:**\n- Evaluación neurológica completa\n- Considerar estudios de imagen si hay signos de alarma\n- Evaluar necesidad de tratamiento sintomático\n- Considerar derivación a neurología si persiste\n\n**Nota:** Esta información es preliminar y debe ser evaluada por el médico tratante del IMSS."
   },
   {
     "user": "¿Un dolor en el pecho siempre es un infarto?",
-    "assistant": "No necesariamente. Puede ser muscular, gastrointestinal u otras causas. Si el dolor es intenso, opresivo, asociado a sudoración, náusea o falta de aire, busca atención de urgencia en el IMSS."
+    "assistant": "El dolor en el pecho puede tener múltiples causas. Para poder ayudarte mejor y proporcionar información útil al médico, necesito hacerte algunas preguntas:\n\n1. ¿Cuándo comenzó el dolor en el pecho?\n2. ¿Qué tan intenso es el dolor? (escala del 1 al 10)\n3. ¿Cómo describirías el dolor? (opresivo, punzante, ardor, etc.)\n4. ¿Se irradia a otras partes del cuerpo? (brazo, mandíbula, espalda)\n5. ¿Hay otros síntomas asociados? (sudoración, náuseas, falta de aire, palpitaciones)\n6. ¿Qué factores lo empeoran o mejoran? (movimiento, respiración, posición)\n7. ¿Tienes algún historial médico relevante? (hipertensión, diabetes, problemas cardíacos)\n8. ¿Estás tomando algún medicamento actualmente?\n\n**IMPORTANTE:** Si el dolor es intenso, opresivo, asociado a sudoración, náusea o falta de aire, busca atención de urgencia en el IMSS de inmediato.\n\nPor favor, comparte esta información para que pueda preparar una descripción completa para el médico."
   }
 ]

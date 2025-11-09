@@ -60,6 +60,9 @@ device = None
 # Base de datos para conversaciones
 DB_PATH = os.getenv("NV_REASON_DB_PATH", "nv_reason_cxr.db")
 
+# Diccionario para rastrear generaciones activas: {request_id: {"session_id": str, "user_id": str}}
+active_requests: Dict[str, Dict[str, Any]] = {}
+
 def init_database():
     """Inicializar base de datos SQLite"""
     try:
@@ -293,10 +296,29 @@ class AnalyzeRequest(BaseModel):
     image_format: Optional[str] = "jpeg"
     session_id: Optional[str] = None
     user_id: Optional[str] = None
+    request_id: Optional[str] = None
+
+
+class CancelRequest(BaseModel):
+    request_id: str
+    session_id: Optional[str] = None
 
 @app.post("/api/analyze")
 async def analyze_xray(request: AnalyzeRequest):
     """Analizar radiografía y traducir respuesta"""
+    # Validación: Requerir imagen
+    if not request.image or not request.image.strip():
+        raise HTTPException(status_code=400, detail="Se requiere una imagen de radiografía de tórax para realizar el análisis")
+    
+    # Generar request_id si no se proporciona
+    request_id = request.request_id or f"req-{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}"
+    
+    # Registrar request activo
+    active_requests[request_id] = {
+        "session_id": request.session_id,
+        "user_id": request.user_id,
+    }
+    
     try:
         # Decodificar imagen
         try:
@@ -305,7 +327,7 @@ async def analyze_xray(request: AnalyzeRequest):
             if image.mode != 'RGB':
                 image = image.convert('RGB')
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Error decodificando imagen: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Error decodificando imagen: {str(e)}. Por favor, asegúrate de subir una imagen válida de radiografía de tórax.")
         
         # Analizar con NV-Reason-CXR (responde en inglés)
         logger.info("[nv-reason-cxr] Iniciando análisis con NV-Reason-CXR-3B...")
@@ -358,6 +380,31 @@ async def analyze_xray(request: AnalyzeRequest):
     except Exception as e:
         logger.error(f"[nv-reason-cxr] Error en endpoint: {e}")
         raise HTTPException(status_code=500, detail=f"Error procesando solicitud: {str(e)}")
+    finally:
+        # Limpiar request activo
+        if request_id in active_requests:
+            del active_requests[request_id]
+
+
+@app.post("/api/analyze/cancel")
+async def cancel_analysis(req: CancelRequest):
+    """Endpoint para cancelar una generación activa"""
+    try:
+        # Verificar que el request existe
+        if req.request_id not in active_requests:
+            return {"success": False, "error": "Request no encontrado o ya completado"}
+        
+        request_info = active_requests[req.request_id]
+        
+        # Limpiar request activo
+        del active_requests[req.request_id]
+        
+        logger.info(f"[nv-reason-cxr] 🛑 Generación cancelada - Request ID: {req.request_id}")
+        return {"success": True, "message": "Generación cancelada exitosamente"}
+        
+    except Exception as e:
+        logger.error(f"[nv-reason-cxr] Error cancelando generación: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/health")
 async def health():

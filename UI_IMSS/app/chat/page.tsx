@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import ReactMarkdown from "react-markdown"
@@ -38,17 +38,21 @@ function ChatPageContent() {
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [currentRequestId, setCurrentRequestId] = useState<string | null>(null)
+  const [abortController, setAbortController] = useState<AbortController | null>(null)
+  const [playingAudio, setPlayingAudio] = useState<number | null>(null) // Índice del mensaje que está reproduciendo audio
+  const [loadingAudio, setLoadingAudio] = useState<number | null>(null) // Índice del mensaje que está cargando audio
+  const [sidebarDesktopOpen, setSidebarDesktopOpen] = useState(true) // Estado para controlar el sidebar en desktop
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const lastEnterTimeRef = useRef<number>(0)
   // Config removida
 
   const getBackendUrl = useMemo(() => {
     return () => {
-      if (typeof window !== 'undefined') {
-        const protocol = window.location.protocol
-        const hostname = window.location.hostname
-        return `${protocol}//${hostname}:5001`
-      }
-      return process.env.NEXT_PUBLIC_CHATBOT_URL || 'http://localhost:5001'
+      // Usar siempre localhost:5001 para desarrollo local
+      return 'http://localhost:5001'
     }
   }, [])
 
@@ -78,26 +82,99 @@ function ChatPageContent() {
     }
   }, [])
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (restoreLastSession: boolean = false) => {
     if (!userId) return
     setLoadingConvs(true)
     try {
-      const url = new URL(`${getBackendUrl()}/api/conversations`)
+      const backendUrl = getBackendUrl()
+      const url = new URL(`${backendUrl}/api/conversations`)
       url.searchParams.set('user_id', userId)
+      
+      console.log('📡 Enviando petición a:', url.toString())
+      
       const res = await fetch(url.toString(), {
         headers: getAuthHeaders()
       })
+      
+      console.log('📥 Respuesta recibida:', {
+        status: res.status,
+        statusText: res.statusText,
+        ok: res.ok
+      })
+      
+      if (!res.ok) {
+        throw new Error(`Error ${res.status}: ${res.statusText}`)
+      }
+      
       const data = await res.json()
       const items: ConversationItem[] = (data.conversations || []).map((c: any) => ({ id: c.id, title: c.title, updated_at: c.updated_at }))
       setConversations(items)
+      
+      // Si se solicita restaurar la última sesión y hay conversaciones, restaurar la última
+      if (restoreLastSession && items.length > 0) {
+        // Ordenar por updated_at descendente y tomar la más reciente
+        const sortedItems = [...items].sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0))
+        const lastConversation = sortedItems[0]
+        console.log('🔄 Restaurando última conversación:', lastConversation.id)
+        
+        // Usar una función de actualización para evitar problemas con el estado
+        setSessionId((currentSessionId) => {
+          // Solo actualizar si no hay sessionId actual
+          if (!currentSessionId) {
+            return lastConversation.id
+          }
+          return currentSessionId
+        })
+        
+        // Cargar el historial de la última conversación
+        try {
+          const historyRes = await fetch(`${backendUrl}/api/history?session_id=${lastConversation.id}&user_id=${userId}`, {
+            headers: getAuthHeaders()
+          })
+          if (historyRes.ok) {
+            const historyData = await historyRes.json()
+            const historyMessages: Message[] = (historyData.messages || [])
+              .filter((m: any) => m.content && m.content.trim())
+              .map((m: any) => ({
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                text: m.content || ''
+              }))
+            // Eliminar duplicados consecutivos
+            const uniqueMessages: Message[] = []
+            for (let i = 0; i < historyMessages.length; i++) {
+              const current = historyMessages[i]
+              const previous = uniqueMessages[uniqueMessages.length - 1]
+              if (!previous || previous.role !== current.role || previous.text !== current.text) {
+                uniqueMessages.push(current)
+              }
+            }
+            setMessages(uniqueMessages)
+            console.log('✅ Historial restaurado:', uniqueMessages.length, 'mensajes')
+          }
+        } catch (e) {
+          console.error('Error cargando historial de última conversación:', e)
+        }
+      }
     } catch (e) {
-      console.error(e)
+      console.error('❌ Error en fetchConversations:', e)
+      if (e instanceof Error) {
+        console.error('Error message:', e.message)
+        console.error('Error stack:', e.stack)
+      }
     } finally {
       setLoadingConvs(false)
     }
   }
 
-  useEffect(() => { fetchConversations() }, [userId])
+  useEffect(() => { 
+    if (userId) {
+      // Restaurar última conversación solo si no hay sessionId actual
+      // Usar una referencia para evitar dependencia circular
+      const shouldRestore = !sessionId
+      fetchConversations(shouldRestore)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   // Filtrar conversaciones basándose en el término de búsqueda
   const filteredConversations = useMemo(() => {
@@ -215,7 +292,49 @@ function ChatPageContent() {
 
   const handleStartRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Verificar si mediaDevices está disponible
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const errorMsg = 'Tu navegador no soporta acceso al micrófono. Por favor usa un navegador moderno como Chrome, Firefox o Edge.'
+        console.error('❌ MediaDevices no disponible:', errorMsg)
+        alert(errorMsg)
+        return
+      }
+
+      // Verificar si el contexto es seguro (HTTPS o localhost)
+      const isSecureContext = window.isSecureContext || 
+                              window.location.protocol === 'https:' || 
+                              window.location.hostname === 'localhost' || 
+                              window.location.hostname === '127.0.0.1'
+      
+      if (!isSecureContext) {
+        const errorMsg = 'El acceso al micrófono requiere HTTPS o localhost. Por favor accede a la aplicación a través de HTTPS (por ejemplo, usando un túnel de Cloudflare con https://).'
+        console.error('❌ Contexto no seguro:', {
+          protocol: window.location.protocol,
+          hostname: window.location.hostname,
+          isSecureContext: window.isSecureContext
+        })
+        alert(errorMsg)
+        return
+      }
+
+      console.log('🎤 Solicitando acceso al micrófono...')
+      console.log('📋 Contexto:', {
+        protocol: window.location.protocol,
+        hostname: window.location.hostname,
+        isSecureContext: window.isSecureContext
+      })
+
+      // Solicitar acceso al micrófono
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      })
+      
+      console.log('✅ Acceso al micrófono concedido')
+      
       const recorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus'
       })
@@ -236,9 +355,19 @@ function ChatPageContent() {
           
           try {
             // Enviar audio al backend para transcripción
-            const response = await fetch(`${getBackendUrl()}/api/transcribe`, {
+            const backendUrl = getBackendUrl()
+            const url = `${backendUrl}/api/transcribe`
+            const headers = getAuthHeaders()
+            
+            console.log('🎤 Enviando audio para transcripción:', {
+              url,
+              audioSize: base64.length,
+              format: 'webm'
+            })
+            
+            const response = await fetch(url, {
               method: 'POST',
-              headers: getAuthHeaders(),
+              headers: headers,
               body: JSON.stringify({
                 audio_data: base64,
                 audio_format: 'webm',
@@ -246,20 +375,40 @@ function ChatPageContent() {
               })
             })
             
+            console.log('📥 Respuesta del servidor:', {
+              status: response.status,
+              statusText: response.statusText,
+              ok: response.ok
+            })
+            
             if (response.ok) {
               const data = await response.json()
+              console.log('✅ Datos de transcripción:', data)
+              
               if (data.success && data.text) {
                 setInput(data.text)
+                console.log('✅ Transcripción exitosa:', data.text)
               } else {
-                console.error('Error en transcripción:', data.error)
-                alert('Error al transcribir el audio. Por favor intenta de nuevo.')
+                console.error('❌ Error en transcripción:', data.error || data)
+                alert(`Error al transcribir el audio: ${data.error || 'Error desconocido'}`)
               }
             } else {
-              throw new Error('Error al transcribir audio')
+              // Intentar obtener el mensaje de error del backend
+              let errorMessage = 'Error al transcribir audio'
+              try {
+                const errorData = await response.json()
+                errorMessage = errorData.detail || errorData.error || errorMessage
+                console.error('❌ Error del servidor:', errorData)
+              } catch (e) {
+                console.error('❌ No se pudo parsear el error:', response.status, response.statusText)
+                errorMessage = `Error ${response.status}: ${response.statusText}`
+              }
+              alert(`Error al transcribir el audio: ${errorMessage}`)
             }
           } catch (error) {
-            console.error('Error enviando audio:', error)
-            alert('Error al transcribir el audio. Por favor intenta de nuevo.')
+            console.error('❌ Error enviando audio:', error)
+            const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+            alert(`Error al transcribir el audio: ${errorMessage}. Por favor intenta de nuevo.`)
           }
         }
         reader.readAsDataURL(blob)
@@ -271,9 +420,39 @@ function ChatPageContent() {
       recorder.start()
       setMediaRecorder(recorder)
       setIsRecording(true)
+      console.log('🎤 Grabación iniciada')
     } catch (error) {
-      console.error('Error iniciando grabación:', error)
-      alert('No se pudo acceder al micrófono. Por favor verifica los permisos.')
+      console.error('❌ Error iniciando grabación:', error)
+      
+      // Manejar diferentes tipos de errores
+      let errorMessage = 'No se pudo acceder al micrófono.'
+      
+      if (error instanceof Error) {
+        const errorName = error.name
+        const errorMsg = error.message
+        
+        console.error('📋 Detalles del error:', {
+          name: errorName,
+          message: errorMsg,
+          error: error
+        })
+        
+        if (errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError') {
+          errorMessage = 'Permiso denegado. Por favor permite el acceso al micrófono en la configuración de tu navegador y recarga la página.'
+        } else if (errorName === 'NotFoundError' || errorName === 'DevicesNotFoundError') {
+          errorMessage = 'No se encontró ningún micrófono. Por favor conecta un micrófono y recarga la página.'
+        } else if (errorName === 'NotReadableError' || errorName === 'TrackStartError') {
+          errorMessage = 'El micrófono está siendo usado por otra aplicación. Por favor cierra otras aplicaciones que usen el micrófono y recarga la página.'
+        } else if (errorName === 'OverconstrainedError' || errorName === 'ConstraintNotSatisfiedError') {
+          errorMessage = 'El micrófono no soporta las características requeridas. Por favor usa otro micrófono.'
+        } else if (errorName === 'SecurityError') {
+          errorMessage = 'Error de seguridad. Por favor accede a la aplicación a través de HTTPS (por ejemplo, usando un túnel de Cloudflare con https://).'
+        } else {
+          errorMessage = `Error al acceder al micrófono: ${errorMsg}. Por favor verifica los permisos del navegador.`
+        }
+      }
+      
+      alert(errorMessage)
     }
   }
 
@@ -282,6 +461,47 @@ function ChatPageContent() {
       mediaRecorder.stop()
       setIsRecording(false)
       setMediaRecorder(null)
+    }
+  }
+
+  const handleStopGeneration = async () => {
+    if (!isLoading || !currentRequestId) return
+    
+    try {
+      const backendUrl = getBackendUrl()
+      await fetch(`${backendUrl}/api/chat/cancel`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          request_id: currentRequestId,
+          session_id: sessionId || undefined,
+        }),
+      })
+      
+      // Cancelar también el AbortController si existe
+      if (abortController) {
+        abortController.abort()
+        setAbortController(null)
+      }
+      
+      // Limpiar estados
+      setCurrentRequestId(null)
+      setIsLoading(false)
+      
+      // Actualizar el mensaje del asistente para indicar que se canceló
+      setMessages((prev) => {
+        const newMessages = [...prev]
+        if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'assistant') {
+          const currentText = newMessages[newMessages.length - 1].text
+          newMessages[newMessages.length - 1] = {
+            role: 'assistant',
+            text: currentText ? currentText + '\n\n[Generación cancelada por el usuario]' : '[Generación cancelada por el usuario]'
+          }
+        }
+        return newMessages
+      })
+    } catch (error) {
+      console.error('Error cancelando generación:', error)
     }
   }
 
@@ -296,6 +516,10 @@ function ChatPageContent() {
     setSelectedImage(null)
     setIsLoading(true)
 
+    // Crear AbortController para cancelar la petición
+    const controller = new AbortController()
+    setAbortController(controller)
+
     // Agregar mensaje del usuario (mostrar texto o indicar que hay imagen)
     setMessages(prev => [...prev, { 
       role: 'user', 
@@ -303,25 +527,14 @@ function ChatPageContent() {
     }])
 
     try {
-      // Detectar la URL del backend dinámicamente
-      const getBackendUrl = () => {
-        // Si estamos en el cliente, usar la misma URL base del navegador
-        if (typeof window !== 'undefined') {
-          const protocol = window.location.protocol
-          const hostname = window.location.hostname
-          // Si la UI corre en un puerto diferente, usar el hostname actual
-          // y asumir que los servicios están en el mismo host con diferentes puertos
-          return `${protocol}//${hostname}:5001`
-        }
-        // Fallback para SSR (aunque esta es una página client-side)
-        return process.env.NEXT_PUBLIC_CHATBOT_URL || 'http://localhost:5001'
-      }
+      // Usar siempre localhost:5001 para desarrollo local
+      const backendUrl = 'http://localhost:5001'
       
       // Si no hay sessionId, crear una conversación primero
       let currentSession = sessionId
       if (!currentSession) {
         try {
-          const res = await fetch(`${getBackendUrl()}/api/conversations`, {
+          const res = await fetch(`${backendUrl}/api/conversations`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({ user_id: userId, title: 'Nueva conversación' })
@@ -336,10 +549,15 @@ function ChatPageContent() {
       // Agregar mensaje de "Quetzalia está pensando"
       setMessages((prev) => [...prev, { role: "assistant", text: "" }])
 
+      // Generar request_id único
+      const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      setCurrentRequestId(requestId)
+
       // Llamar al backend (la autenticación ya se verifica en ProtectedRoute)
-      const response = await fetch(`${getBackendUrl()}/api/chat`, {
+      const response = await fetch(`${backendUrl}/api/chat`, {
         method: 'POST',
         headers: getAuthHeaders(),
+        signal: controller.signal,
         body: JSON.stringify({
           message: userMessage,
           image: imageToSend, // Imagen en base64
@@ -347,6 +565,7 @@ function ChatPageContent() {
           session_id: currentSession || undefined,
           user_id: userId || undefined,
           stream: false, // Sin streaming - recibir respuesta completa
+          request_id: requestId, // Enviar request_id para poder cancelar
         }),
       })
 
@@ -384,7 +603,13 @@ function ChatPageContent() {
 
       // Recargar conversaciones después de enviar mensaje
       fetchConversations()
-    } catch (error) {
+    } catch (error: any) {
+      // Ignorar errores de abort
+      if (error.name === 'AbortError') {
+        console.log('Petición cancelada por el usuario')
+        return
+      }
+      
       console.error('Error:', error)
       
       // Obtener mensaje de error más descriptivo
@@ -415,13 +640,206 @@ function ChatPageContent() {
       })
     } finally {
       setIsLoading(false)
+      setCurrentRequestId(null)
+      setAbortController(null)
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
+  // Ajustar altura del textarea automáticamente
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`
+    }
+  }
+
+  useEffect(() => {
+    adjustTextareaHeight()
+  }, [input])
+
+  // Limpiar audio cuando el componente se desmonte
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
+    }
+  }, [])
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
+      const now = Date.now()
+      const timeSinceLastEnter = now - lastEnterTimeRef.current
+      
+      // Si es un Enter doble (dos Enter seguidos en menos de 500ms)
+      // Verificar si el texto termina con un salto de línea o si es el segundo Enter rápido
+      if (timeSinceLastEnter < 500 && timeSinceLastEnter > 0) {
+        // Si el texto termina con salto de línea, es un Enter doble
+        if (input.endsWith('\n')) {
+          e.preventDefault()
+          // Remover el salto de línea extra antes de enviar
+          const textToSend = input.trimEnd()
+          if (textToSend || selectedImage) {
+            lastEnterTimeRef.current = 0
+            // Usar setTimeout para permitir que el textarea procese el cambio
+            setTimeout(() => {
+              handleSendMessage()
+            }, 0)
+          } else {
+            lastEnterTimeRef.current = 0
+          }
+        } else {
+          // Primer Enter, permitir que se inserte el salto de línea
+          lastEnterTimeRef.current = now
+        }
+      } else {
+        // Enter simple = salto de línea (comportamiento normal del textarea)
+        lastEnterTimeRef.current = now
+      }
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value)
+    adjustTextareaHeight()
+  }
+
+  const handlePlayAudio = async (messageIndex: number, text: string) => {
+    // Si ya está reproduciendo este mensaje, detener
+    if (playingAudio === messageIndex && audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      setPlayingAudio(null)
+      return
+    }
+
+    // Si está reproduciendo otro mensaje, detenerlo primero
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+    }
+
+    // Limpiar texto de markdown y HTML para TTS
+    const cleanText = text
+      .replace(/<[^>]*>/g, '') // Remover HTML tags
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remover enlaces markdown
+      .replace(/\*\*([^\*]+)\*\*/g, '$1') // Remover negritas
+      .replace(/\*([^\*]+)\*/g, '$1') // Remover cursivas
+      .replace(/#{1,6}\s+/g, '') // Remover encabezados
+      .replace(/`([^`]+)`/g, '$1') // Remover código inline
+      .replace(/```[\s\S]*?```/g, '') // Remover bloques de código
+      .trim()
+
+    if (!cleanText) {
+      alert('No hay texto para reproducir')
+      return
+    }
+
+    setLoadingAudio(messageIndex)
+
+    try {
+      // "Desbloquear" el audio inmediatamente después del clic del usuario
+      // Esto asegura que el navegador reconozca la interacción del usuario
+      try {
+        // 1. Desbloquear AudioContext si está disponible
+        if (!audioContextRef.current) {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+          if (AudioContextClass) {
+            audioContextRef.current = new AudioContextClass()
+          }
+        }
+        
+        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          await audioContextRef.current.resume()
+        }
+        
+        // 2. Crear un elemento Audio vacío y llamar a load() inmediatamente
+        // Esto "prepara" el contexto de audio HTML para la reproducción
+        const tempAudio = new Audio()
+        tempAudio.volume = 0
+        tempAudio.load()
+        // Intentar reproducir y pausar inmediatamente (esto desbloquea el audio)
+        try {
+          await tempAudio.play()
+          tempAudio.pause()
+          tempAudio.currentTime = 0
+        } catch (e) {
+          // Ignorar errores en el audio temporal
+        }
+      } catch (unlockError) {
+        // Si falla el desbloqueo, continuar de todas formas
+        console.warn('No se pudo desbloquear audio:', unlockError)
+      }
+
+      const backendUrl = getBackendUrl()
+      const response = await fetch(`${backendUrl}/api/tts`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          text: cleanText,
+          speaker_id: 'ash' // Usar voz 'ash' por defecto
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Error desconocido' }))
+        throw new Error(errorData.detail || `Error ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      if (!data.success || !data.audio_data) {
+        throw new Error('No se pudo generar el audio')
+      }
+
+      // Convertir base64 a blob y crear URL
+      const binaryString = atob(data.audio_data)
+      const bytes = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+      const audioBlob = new Blob([bytes], { type: 'audio/wav' })
+      const audioUrl = URL.createObjectURL(audioBlob)
+      
+      // Crear elemento de audio y reproducir
+      const audio = new Audio(audioUrl)
+      audioRef.current = audio
+      
+      audio.onended = () => {
+        setPlayingAudio(null)
+        URL.revokeObjectURL(audioUrl)
+      }
+      
+      audio.onerror = (e) => {
+        console.error('Error reproduciendo audio:', e)
+        setPlayingAudio(null)
+        setLoadingAudio(null)
+        URL.revokeObjectURL(audioUrl)
+        alert('Error al reproducir el audio')
+      }
+      
+      // Intentar reproducir el audio
+      try {
+        await audio.play()
+        setPlayingAudio(messageIndex)
+        setLoadingAudio(null)
+      } catch (playError: any) {
+        // Si falla por permisos, mostrar un mensaje más claro
+        if (playError.name === 'NotAllowedError' || playError.message?.includes('not allowed')) {
+          setLoadingAudio(null)
+          alert('Por favor, haz clic en el botón de reproducción nuevamente para permitir el audio. Los navegadores requieren interacción del usuario para reproducir audio.')
+          URL.revokeObjectURL(audioUrl)
+        } else {
+          throw playError
+        }
+      }
+    } catch (error) {
+      console.error('Error generando audio:', error)
+      setLoadingAudio(null)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      alert(`Error al generar audio: ${errorMessage}`)
     }
   }
 
@@ -477,40 +895,22 @@ function ChatPageContent() {
   }
 
   return (
-    <div className="h-screen flex bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <div className="h-screen flex bg-gray-50 dark:bg-gray-900 overflow-hidden relative">
+      {/* Overlay para desktop cuando el sidebar está abierto */}
+      {sidebarDesktopOpen && (
+        <div 
+          className="hidden md:block fixed inset-0 bg-black/20 dark:bg-black/40 z-30 transition-opacity duration-300"
+          onClick={() => setSidebarDesktopOpen(false)}
+        />
+      )}
+      
       {/* Left Sidebar (desktop) */}
-      <div className={`hidden md:flex bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-col transition-all duration-300 ease-in-out ${
-        sidebarCollapsed ? 'w-16' : 'w-80'
+      <div className={`hidden md:flex fixed left-0 top-0 h-full w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-col transition-transform duration-300 ease-in-out z-40 ${
+        sidebarDesktopOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Header */}
-        <div className={`p-6 border-b border-gray-200 dark:border-gray-800 ${sidebarCollapsed ? 'p-3' : ''}`}>
-          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-4`}>
-            {!sidebarCollapsed && (
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                aria-label="Ocultar menú"
-                className="text-gray-500 dark:text-gray-400 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            )}
-            {sidebarCollapsed && (
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                aria-label="Mostrar menú"
-                className="text-gray-500 dark:text-gray-400 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            )}
-          </div>
-          <div className={`flex flex-col items-center gap-3 mb-4 transition-opacity duration-300 ${
-            sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          }`}>
+        <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex flex-col items-center gap-3 mb-4">
             <Image
               src="/IMSS.png"
               alt="IMSS"
@@ -518,45 +918,36 @@ function ChatPageContent() {
               height={60}
               className="h-12 w-auto"
             />
-            <Image
-              src="/quetzalia.png"
-              alt="quetzalIA.mx"
-              width={200}
-              height={60}
-              className="h-12 w-auto"
-            />
           </div>
-          <div className={`transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-            <Button onClick={handleNewChat} className="w-full bg-[#068959] hover:bg-[#057a4a] text-white">+ Nuevo chat</Button>
-            <div className="mt-3">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start"
-                onClick={() => setIsSearchOpen(!isSearchOpen)}
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                Buscar
-              </Button>
-              {isSearchOpen && (
-                <div className="mt-2">
-                  <Input
-                    type="text"
-                    placeholder="Buscar conversaciones..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full"
-                    autoFocus
-                  />
-                </div>
-              )}
-            </div>
+          <Button onClick={handleNewChat} className="w-full bg-[#068959] hover:bg-[#057a4a] text-white">+ Nuevo chat</Button>
+          <div className="mt-3">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start"
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              Buscar
+            </Button>
+            {isSearchOpen && (
+              <div className="mt-2">
+                <Input
+                  type="text"
+                  placeholder="Buscar conversaciones..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full"
+                  autoFocus
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* Your conversations */}
-        <div className={`flex-1 overflow-y-auto p-6 transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <div className="flex-1 overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tus conversaciones</h3>
             <button onClick={handleDeleteAll} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">Borrar todo</button>
@@ -649,7 +1040,7 @@ function ChatPageContent() {
         </div>
 
         {/* Footer */}
-        <div className={`p-6 border-t border-gray-200 dark:border-gray-800 transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <div className="p-6 border-t border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer">
             <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
               <span className="text-white text-xs font-semibold">IM</span>
@@ -665,7 +1056,9 @@ function ChatPageContent() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
+        sidebarDesktopOpen ? 'md:ml-0' : 'md:ml-0'
+      }`}>
         {/* Top Navigation */}
         <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
           {/* Mobile: hamburger + logo */}
@@ -690,12 +1083,8 @@ function ChatPageContent() {
                   <div className="p-6 border-b border-gray-200 dark:border-gray-800">
                     <div className="flex flex-col items-center gap-3 mb-4">
                       <Image src="/IMSS.png" alt="IMSS" width={90} height={60} className="h-12 w-auto" />
-                      <Image src="/quetzalia.png" alt="quetzalIA.mx" width={200} height={60} className="h-12 w-auto" />
                     </div>
-                    <Button onClick={() => {
-                      handleNewChat()
-                      setSidebarOpen(false)
-                    }} className="w-full bg-[#068959] hover:bg-[#057a4a] text-white">+ Nuevo chat</Button>
+                    <Button onClick={handleNewChat} className="w-full bg-[#068959] hover:bg-[#057a4a] text-white">+ Nuevo chat</Button>
                     <div className="mt-3">
                       <Button 
                         variant="ghost" 
@@ -723,19 +1112,19 @@ function ChatPageContent() {
                   </div>
                   <div className="flex-1 overflow-y-auto p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tus conversaciones</h3>
-                      <button onClick={handleDeleteAll} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">Borrar todo</button>
+                      <h3 className="text-sm font-semibold text-gray-900">Tus conversaciones</h3>
+                      <button onClick={handleDeleteAll} className="text-xs text-blue-600 hover:text-blue-700">Borrar todo</button>
                     </div>
                     <div className="space-y-2">
-                      {loadingConvs && <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">Cargando...</p>}
+                      {loadingConvs && <p className="text-sm text-gray-500 text-center py-8">Cargando...</p>}
                       {!loadingConvs && conversations.length === 0 && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">No hay conversaciones aún</p>
+                        <p className="text-sm text-gray-500 text-center py-8">No hay conversaciones aún</p>
                       )}
                       {!loadingConvs && searchTerm && filteredConversations.length === 0 && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8">No se encontraron conversaciones</p>
+                        <p className="text-sm text-gray-500 text-center py-8">No se encontraron conversaciones</p>
                       )}
                       {filteredConversations.map((c) => (
-                        <div key={c.id} className={`w-full px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 ${sessionId===c.id?'bg-gray-100 dark:bg-gray-800':''}`}>
+                        <div key={c.id} className={`w-full px-3 py-2 rounded hover:bg-gray-100 ${sessionId===c.id?'bg-gray-100':''}`}>
                           <div className="flex items-center gap-2">
                             <button onClick={async () => {
                               setSessionId(c.id)
@@ -767,13 +1156,13 @@ function ChatPageContent() {
                                 console.error('Error cargando conversación:', e)
                               }
                             }} className="flex-1 text-left">
-                              <div className="text-sm text-gray-900 dark:text-gray-100">{c.title || 'Conversación'}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">{new Date((c.updated_at||0)*1000).toLocaleString()}</div>
+                              <div className="text-sm text-gray-900">{c.title || 'Conversación'}</div>
+                              <div className="text-xs text-gray-500">{new Date((c.updated_at||0)*1000).toLocaleString()}</div>
                             </button>
                             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                               <button
                                 aria-label="Renombrar"
-                                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 px-2 py-1"
+                                className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1"
                                 onClick={async (e) => {
                                   e.stopPropagation()
                                   const title = prompt('Nuevo título', c.title || 'Conversación')
@@ -790,7 +1179,7 @@ function ChatPageContent() {
                               >Renombrar</button>
                               <button
                                 aria-label="Borrar"
-                                className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 px-2 py-1"
+                                className="text-xs text-red-600 hover:text-red-700 px-2 py-1"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleDeleteConversation(c.id)
@@ -806,13 +1195,20 @@ function ChatPageContent() {
                       ))}
                     </div>
                   </div>
-                  <div className="p-6 border-t border-gray-200 dark:border-gray-800">
-                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer">
+                  <div className="p-6 border-t border-gray-200">
+                    <Button variant="ghost" className="w-full justify-start mb-4">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Configuración
+                    </Button>
+                    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 cursor-pointer">
                       <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs font-semibold">IM</span>
+                        <span className="text-white text-xs font-semibold">AN</span>
                       </div>
                       <div className="flex-1">
-                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">IMSS</div>
+                        <div className="text-sm font-semibold text-gray-900">Andrew Neilson</div>
                       </div>
                       <svg className="w-4 h-4 text-[#068959]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -823,29 +1219,28 @@ function ChatPageContent() {
               </SheetContent>
             </Sheet>
             </div>
-            <div className="flex items-center gap-2">
-              <Image src="/IMSS.png" alt="IMSS" width={60} height={40} className="h-7 w-auto" />
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Image src="/IMSS.png" alt="IMSS" width={400} height={100} className="h-14 md:h-20 lg:h-24 w-auto" />
             </div>
           </div>
           {/* Desktop links */}
           <div className="hidden md:flex items-center justify-between w-full">
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                aria-label={sidebarCollapsed ? "Mostrar menú" : "Ocultar menú"}
-                className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <Link href="/home" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors flex items-center gap-2">
+            {/* Botón hamburguesa para desktop */}
+            <button
+              onClick={() => setSidebarDesktopOpen(!sidebarDesktopOpen)}
+              aria-label={sidebarDesktopOpen ? "Cerrar menú" : "Abrir menú"}
+              className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <Link href="/home" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] transition-colors flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
               <span className="font-medium">Inicio</span>
             </Link>
-            </div>
             <div className="flex items-center gap-6 lg:gap-8">
               <Link href="/home" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium">
                 Agentes IA
@@ -880,11 +1275,37 @@ function ChatPageContent() {
               {messages.length > 0 && messages.map((msg, idx) => (
                 <div key={idx} className="flex gap-2 sm:gap-3">
                   <div className={`flex-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                    <div className={`inline-block px-3 py-2 sm:px-4 sm:py-2 rounded-lg ${
+                    <div className={`inline-block px-3 py-2 sm:px-4 sm:py-2 rounded-lg relative ${
                       msg.role === 'user' ? 'bg-[#068959] text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                     }`}>
+                      {msg.role === 'assistant' && msg.text && msg.text.trim() && (
+                        <button
+                          onClick={() => handlePlayAudio(idx, msg.text)}
+                          disabled={loadingAudio === idx}
+                          className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors ${
+                            playingAudio === idx
+                              ? 'bg-red-500 hover:bg-red-600 text-white'
+                              : loadingAudio === idx
+                              ? 'bg-gray-400 text-white cursor-not-allowed'
+                              : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                          }`}
+                          title={playingAudio === idx ? 'Detener audio' : loadingAudio === idx ? 'Generando audio...' : 'Reproducir audio'}
+                        >
+                          {loadingAudio === idx ? (
+                            <Spinner className="w-4 h-4" />
+                          ) : playingAudio === idx ? (
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
                       {msg.role === 'assistant' ? (
-                        <div className="max-w-full leading-relaxed markdown-content overflow-x-hidden">
+                        <div className="max-w-full leading-relaxed markdown-content overflow-x-hidden pr-8">
                           {/* Mostrar animación "Quetzalia está pensando" si el mensaje está vacío y está cargando */}
                           {!msg.text && isLoading ? (
                             <div className="flex items-center gap-2 text-gray-600">
@@ -904,27 +1325,27 @@ function ChatPageContent() {
                               components={{
                                 // Estilos para párrafos
                                 p: ({ children }: { children?: React.ReactNode }) => (
-                                  <p className="mb-2 last:mb-0 break-words text-gray-900 dark:text-gray-100">{children}</p>
+                                  <p className="mb-2 last:mb-0 break-words text-gray-900">{children}</p>
                                 ),
                                 // Estilos para encabezados
                                 h1: ({ children }: { children?: React.ReactNode }) => (
-                                  <h1 className="text-2xl font-bold mb-3 mt-4 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h1>
+                                  <h1 className="text-2xl font-bold mb-3 mt-4 first:mt-0 text-gray-900">{children}</h1>
                                 ),
                                 h2: ({ children }: { children?: React.ReactNode }) => (
-                                  <h2 className="text-xl font-bold mb-2 mt-3 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h2>
+                                  <h2 className="text-xl font-bold mb-2 mt-3 first:mt-0 text-gray-900">{children}</h2>
                                 ),
                                 h3: ({ children }: { children?: React.ReactNode }) => (
-                                  <h3 className="text-lg font-bold mb-2 mt-2 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h3>
+                                  <h3 className="text-lg font-bold mb-2 mt-2 first:mt-0 text-gray-900">{children}</h3>
                                 ),
                                 h4: ({ children }: { children?: React.ReactNode }) => (
-                                  <h4 className="text-base font-bold mb-2 mt-2 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h4>
+                                  <h4 className="text-base font-bold mb-2 mt-2 first:mt-0 text-gray-900">{children}</h4>
                                 ),
                                 // Estilos para listas
                                 ul: ({ children }: { children?: React.ReactNode }) => (
-                                  <ul className="list-disc list-inside mb-2 space-y-1 ml-4 text-gray-900 dark:text-gray-100">{children}</ul>
+                                  <ul className="list-disc list-inside mb-2 space-y-1 ml-4 text-gray-900">{children}</ul>
                                 ),
                                 ol: ({ children }: { children?: React.ReactNode }) => (
-                                  <ol className="list-decimal list-inside mb-2 space-y-1 ml-4 text-gray-900 dark:text-gray-100">{children}</ol>
+                                  <ol className="list-decimal list-inside mb-2 space-y-1 ml-4 text-gray-900">{children}</ol>
                                 ),
                                 li: ({ children }: { children?: React.ReactNode }) => (
                                   <li className="break-words">{children}</li>
@@ -934,31 +1355,31 @@ function ChatPageContent() {
                                   const match = /language-(\w+)/.exec(className || "")
                                   const isInline = !match || (node as any)?.properties?.className?.includes('inline')
                                   return !isInline && match ? (
-                                    <pre className="bg-gray-800 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300 dark:border-gray-700">
-                                      <code className={`${className} text-gray-100`} {...props}>
+                                    <pre className="bg-gray-800 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300">
+                                      <code className={className} {...props}>
                                         {children}
                                       </code>
                                     </pre>
                                   ) : (
-                                    <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-sm font-mono border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200" {...props}>
+                                    <code className="bg-gray-200 px-2 py-1 rounded text-sm font-mono border border-gray-300 text-gray-800" {...props}>
                                       {children}
                                     </code>
                                   )
                                 },
                                 pre: ({ children }: { children?: React.ReactNode }) => (
-                                  <pre className="bg-gray-800 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300 dark:border-gray-700 text-gray-100">
+                                  <pre className="bg-gray-800 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300">
                                     {children}
                                   </pre>
                                 ),
                                 // Estilos para bloques de cita
                                 blockquote: ({ children }: { children?: React.ReactNode }) => (
-                                  <blockquote className="border-l-4 border-gray-400 dark:border-gray-500 pl-4 italic my-2 text-gray-700 dark:text-gray-300">
+                                  <blockquote className="border-l-4 border-gray-400 pl-4 italic my-2 text-gray-700">
                                     {children}
                                   </blockquote>
                                 ),
                                 // Estilos para texto en negrita
                                 strong: ({ children }: { children?: React.ReactNode }) => (
-                                  <strong className="font-bold text-gray-900 dark:text-gray-100">{children}</strong>
+                                  <strong className="font-bold text-gray-900">{children}</strong>
                                 ),
                                 // Estilos para texto en cursiva
                                 em: ({ children }: { children?: React.ReactNode }) => (
@@ -966,45 +1387,45 @@ function ChatPageContent() {
                                 ),
                                 // Estilos para enlaces
                                 a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
-                                  <a href={href} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">
+                                  <a href={href} className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
                                     {children}
                                   </a>
                                 ),
                                 // Estilos para tablas
                                 table: ({ children, ...props }: any) => (
                                   <div className="overflow-x-auto my-4 w-full max-w-full">
-                                    <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 table-auto max-w-full" {...props}>
+                                    <table className="min-w-full border-collapse border border-gray-300 bg-white table-auto max-w-full" {...props}>
                                       {children}
                                     </table>
                                   </div>
                                 ),
                                 thead: ({ children, ...props }: any) => (
-                                  <thead className="bg-gray-100 dark:bg-gray-700" {...props}>
+                                  <thead className="bg-gray-100" {...props}>
                                     {children}
                                   </thead>
                                 ),
                                 tbody: ({ children, ...props }: any) => (
-                                  <tbody className="bg-white dark:bg-gray-800" {...props}>
+                                  <tbody className="bg-white" {...props}>
                                     {children}
                                   </tbody>
                                 ),
                                 tr: ({ children, ...props }: any) => (
-                                  <tr className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" {...props}>
+                                  <tr className="border-b border-gray-300 hover:bg-gray-50 transition-colors" {...props}>
                                     {children}
                                   </tr>
                                 ),
                                 th: ({ children, ...props }: any) => (
-                                  <th className="border border-gray-300 dark:border-gray-700 px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-700" {...props}>
+                                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 bg-gray-100" {...props}>
                                     {children}
                                   </th>
                                 ),
                                 td: ({ children, ...props }: any) => (
-                                  <td className="border border-gray-300 dark:border-gray-700 px-4 py-3 text-gray-900 dark:text-gray-100" {...props}>
+                                  <td className="border border-gray-300 px-4 py-3 text-gray-900" {...props}>
                                     {children}
                                   </td>
                                 ),
                                 hr: () => (
-                                  <hr className="my-4 border-gray-300 dark:border-gray-700" />
+                                  <hr className="my-4 border-gray-300" />
                                 ),
                               }}
                             >
@@ -1081,24 +1502,38 @@ function ChatPageContent() {
                     </svg>
                   )}
                 </button>
-                <input
-                  type="text"
+                <textarea
+                  ref={textareaRef}
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Escribe tu mensaje o graba un audio..."
-                  className="flex-1 bg-transparent outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm sm:text-base"
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Escribe tu mensaje o graba un audio... (Enter para nueva línea, Enter doble para enviar)"
+                  className="flex-1 bg-transparent outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm sm:text-base resize-none overflow-y-auto min-h-[2.5rem] max-h-[200px] py-2"
                   disabled={isLoading}
+                  rows={1}
+                  style={{ height: 'auto' }}
                 />
-                <button 
-                  onClick={handleSendMessage}
-                  disabled={isLoading || (!input.trim() && !selectedImage)}
-                  className="w-9 h-9 sm:w-10 sm:h-10 bg-[#068959] rounded-full flex items-center justify-center hover:bg-[#057a4a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                </button>
+                {isLoading ? (
+                  <button 
+                    onClick={handleStopGeneration}
+                    className="w-9 h-9 sm:w-10 sm:h-10 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                    title="Detener generación"
+                  >
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 6h12v12H6z" />
+                    </svg>
+                  </button>
+                ) : (
+                  <button 
+                    onClick={handleSendMessage}
+                    disabled={!input.trim() && !selectedImage}
+                    className="w-9 h-9 sm:w-10 sm:h-10 bg-[#068959] rounded-full flex items-center justify-center hover:bg-[#057a4a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
           </div>

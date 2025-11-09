@@ -355,6 +355,30 @@ class MemoryManager:
         except Exception as e:
             logger.error(f"❌ Error listando conversaciones: {e}")
             return []
+    
+    def get_last_conversation(self, user_id: str) -> Optional[str]:
+        """Obtener el session_id de la última conversación de un usuario"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id
+                FROM conversations
+                WHERE user_id = ?
+                ORDER BY updated_at DESC
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                return row[0]
+            return None
+        except Exception as e:
+            logger.error(f"❌ Error obteniendo última conversación: {e}")
+            return None
 
     def delete_all_conversations(self, user_id: str) -> int:
         """Eliminar todas las conversaciones y mensajes de un usuario"""

@@ -755,11 +755,200 @@ y tratamientos médicos. Responde en español."""
         
         return text
     
-    async def process_chat(self, user_message: str, session_id: str = "", use_entities: bool = True) -> str:
-        """Procesar chat con contexto de memoria usando LCEL completo con historial, Few-shot, OutputParsers"""
+    def _has_sufficient_information(self, user_message: str, conversation_history: List[BaseMessage]) -> tuple[bool, List[str], Optional[str]]:
+        """
+        Detectar si hay suficiente información para hacer una descripción del paciente.
+        
+        Retorna:
+            - bool: True si hay suficiente información, False si no
+            - List[str]: Lista de preguntas que faltan hacer (o lista vacía si no es médico)
+            - Optional[str]: Mensaje especial si no es una consulta médica (None si es médica)
+        """
+        # Validar entrada
+        if not user_message or not isinstance(user_message, str):
+            return True, [], None  # Continuar con flujo normal
+        
+        # Validar que conversation_history sea una lista
+        if not isinstance(conversation_history, list):
+            logger.warning(f"⚠️ conversation_history no es una lista: {type(conversation_history)}")
+            conversation_history = []
+        
+        message_lower = user_message.lower().strip()
+        
+        # Detectar saludos y mensajes no médicos
+        greetings = ["hola", "buenos días", "buenas tardes", "buenas noches", "buen día", 
+                     "hi", "hello", "saludos", "qué tal", "cómo estás", "cómo está"]
+        
+        # Detectar si es solo un saludo
+        is_greeting = any(greeting in message_lower for greeting in greetings) and len(message_lower.split()) <= 5
+        
+        # Detectar palabras clave médicas
+        medical_keywords = [
+            "dolor", "síntoma", "malestar", "enfermedad", "enfermo", "enferma",
+            "fiebre", "tos", "náusea", "vómito", "mareo", "mareos",
+            "medicamento", "medicina", "pastilla", "tratamiento",
+            "diagnóstico", "diagnosticar", "consulta", "médico", "doctor",
+            "clínica", "hospital", "imss", "urgencia", "emergencia",
+            "sangre", "herida", "fractura", "golpe", "caída",
+            "presión", "diabetes", "hipertensión", "asma", "alergia",
+            "cáncer", "tumor", "quiste", "infección", "bacteria", "virus"
+        ]
+        
+        # Verificar si el mensaje tiene contenido médico
+        has_medical_content = any(keyword in message_lower for keyword in medical_keywords)
+        
+        # Si es solo un saludo, no hacer preguntas médicas
+        if is_greeting and not has_medical_content:
+            return True, [], "greeting"  # Indicar que es un saludo
+        
+        # Si no tiene contenido médico y no es un saludo, indicar que no es una consulta médica
+        if not has_medical_content and len(message_lower.split()) > 5:
+            # Verificar si es una pregunta sobre el sistema o información general
+            system_keywords = ["quién eres", "qué eres", "cómo funcionas", "qué puedes hacer", 
+                              "ayuda", "help", "información", "sobre ti"]
+            is_system_question = any(keyword in message_lower for keyword in system_keywords)
+            
+            if not is_system_question:
+                return True, [], "not_medical"  # Indicar que no es una consulta médica
+        
+        # Palabras clave que indican información suficiente
+        sufficient_keywords = [
+            "desde hace", "hace", "días", "semanas", "meses", "horas",
+            "intensidad", "intenso", "leve", "moderado", "severo", "fuerte", "débil",
+            "localización", "localiza", "frente", "sien", "parte posterior", "lado",
+            "síntomas", "asociados", "náuseas", "vómitos", "fiebre", "tos", "dolor",
+            "medicamentos", "tomo", "estoy tomando", "medicamento",
+            "historial", "antecedentes", "he tenido", "tengo", "padezco",
+            "edad", "años", "género", "hombre", "mujer",
+            "mejora", "empeora", "alivia", "agudiza"
+        ]
+        
+        # Combinar mensaje actual con historial reciente para análisis completo
+        full_text = message_lower
+        if conversation_history and len(conversation_history) > 0:
+            # Agregar últimos mensajes del usuario al análisis
+            try:
+                for msg in conversation_history[-4:]:  # Últimos 4 mensajes
+                    if isinstance(msg, HumanMessage):
+                        full_text += " " + str(msg.content).lower()
+            except Exception as e:
+                logger.warning(f"⚠️ Error procesando historial: {e}")
+                # Continuar sin historial si hay error
+        
+        # Contar cuántas palabras clave están presentes
+        found_keywords = [kw for kw in sufficient_keywords if kw in full_text]
+        
+        # Si hay menos de 3 palabras clave y el mensaje es corto, probablemente falta información
+        # Pero solo si tiene contenido médico
+        if has_medical_content and (len(found_keywords) < 3 or len(user_message.strip()) < 20):
+            # Generar preguntas relevantes basadas en los síntomas mencionados
+            questions = self._generate_relevant_questions(user_message)
+            return False, questions, None
+        
+        # Si tiene contenido médico y suficiente información, continuar
+        return True, [], None
+    
+    def _generate_relevant_questions(self, user_message: str) -> List[str]:
+        """
+        Generar preguntas relevantes basadas en los síntomas mencionados.
+        """
+        message_lower = user_message.lower()
+        questions = []
+        
+        # Detectar síntomas comunes y generar preguntas específicas
+        if "dolor" in message_lower:
+            if "cuándo" not in message_lower and "hace" not in message_lower and "desde" not in message_lower:
+                questions.append("¿Cuándo comenzó el dolor?")
+            if "intensidad" not in message_lower and "intenso" not in message_lower and "leve" not in message_lower and "moderado" not in message_lower and "severo" not in message_lower:
+                questions.append("¿Qué tan intenso es el dolor? (escala del 1 al 10)")
+            if "localiza" not in message_lower and "dónde" not in message_lower and "frente" not in message_lower and "sien" not in message_lower:
+                questions.append("¿Dónde se localiza el dolor?")
+        
+        if "fiebre" in message_lower or "temperatura" in message_lower:
+            if "temperatura" not in message_lower or "cuánto" not in message_lower:
+                questions.append("¿Cuál es la temperatura exacta?")
+            if "hace" not in message_lower and "desde" not in message_lower:
+                questions.append("¿Cuánto tiempo lleva con fiebre?")
+        
+        if "tos" in message_lower:
+            if "seca" not in message_lower and "flemas" not in message_lower:
+                questions.append("¿La tos es seca o con flemas?")
+            if "hace" not in message_lower and "desde" not in message_lower:
+                questions.append("¿Cuánto tiempo lleva con tos?")
+        
+        if "pecho" in message_lower or "torácico" in message_lower:
+            questions.append("¿Cómo describirías el dolor? (opresivo, punzante, ardor, etc.)")
+            questions.append("¿Se irradia a otras partes del cuerpo? (brazo, mandíbula, espalda)")
+            questions.append("¿Hay otros síntomas asociados? (sudoración, náuseas, falta de aire, palpitaciones)")
+        
+        # Preguntas generales que siempre son útiles si no están presentes
+        if not ("medicamento" in message_lower or "tomo" in message_lower or "estoy tomando" in message_lower):
+            questions.append("¿Estás tomando algún medicamento actualmente?")
+        
+        if not ("historial" in message_lower or "antecedente" in message_lower or "he tenido" in message_lower or "padezco" in message_lower):
+            questions.append("¿Tienes algún historial médico relevante?")
+        
+        if not ("edad" in message_lower or "años" in message_lower):
+            questions.append("¿Cuál es tu edad?")
+        
+        # Si no hay síntomas específicos detectados, hacer preguntas generales
+        if not questions:
+            questions.append("¿Cuándo comenzó el síntoma?")
+            questions.append("¿Qué tan intenso es? (escala del 1 al 10)")
+            questions.append("¿Hay otros síntomas asociados?")
+            questions.append("¿Estás tomando algún medicamento actualmente?")
+        
+        return questions[:6]  # Máximo 6 preguntas
+    
+    async def process_chat(self, user_message: str, session_id: str = "", use_entities: bool = True, request_id: Optional[str] = None) -> str:
+        """Procesar chat con lógica de preguntas antes de diagnosticar"""
         try:
             # Obtener historial de conversación desde SQLite
             history = self._get_chat_history(session_id)
+            
+            # Detectar si hay suficiente información
+            try:
+                has_sufficient_info, missing_questions, special_message = self._has_sufficient_information(
+                    user_message, 
+                    history.messages
+                )
+                
+                # Validar que missing_questions sea una lista
+                if not isinstance(missing_questions, list):
+                    logger.warning(f"⚠️ missing_questions no es una lista: {type(missing_questions)}")
+                    missing_questions = []
+                
+                # Manejar saludos
+                if special_message == "greeting":
+                    response = "¡Hola! Soy Quetzalia Salud, tu asistente médico del IMSS. Estoy aquí para ayudarte con consultas médicas. ¿En qué puedo ayudarte hoy?"
+                    history.add_user_message(user_message)
+                    history.add_ai_message(response)
+                    logger.info(f"📋 Saludo detectado. Respondiendo amigablemente")
+                    return response
+                
+                # Manejar consultas no médicas
+                if special_message == "not_medical":
+                    response = "Lo siento, solo puedo ayudarte con consultas médicas relacionadas con el IMSS. Si tienes alguna pregunta sobre síntomas, medicamentos, tratamientos o información médica, estaré encantado de ayudarte. ¿Hay algo médico en lo que pueda asistirte?"
+                    history.add_user_message(user_message)
+                    history.add_ai_message(response)
+                    logger.info(f"📋 Consulta no médica detectada. Redirigiendo a tema médico")
+                    return response
+                
+                # Si no hay suficiente información médica, hacer preguntas
+                if not has_sufficient_info and missing_questions and len(missing_questions) > 0:
+                    # Construir mensaje para hacer preguntas
+                    questions_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(missing_questions)])
+                    response = f"""Entiendo tu consulta. Para poder ayudarte mejor y proporcionar información útil al médico, necesito hacerte algunas preguntas:\n\n{questions_text}\n\nPor favor, comparte esta información para que pueda preparar una descripción completa para el médico."""
+                    
+                    # Guardar en historial
+                    history.add_user_message(user_message)
+                    history.add_ai_message(response)
+                    
+                    logger.info(f"📋 Información insuficiente detectada. Haciendo preguntas al usuario")
+                    return response
+            except Exception as e:
+                logger.error(f"❌ Error en detección de información suficiente: {e}", exc_info=True)
+                # Continuar con el flujo normal si hay error en la detección
             
             # Preparar contexto en paralelo (async optimizado)
             async def prepare_context():
@@ -880,6 +1069,10 @@ y tratamientos médicos. Responde en español."""
                 "max_tokens": 2048,
                 "stream": False,
             }
+            
+            # Añadir request_id si se proporciona (para cancelación)
+            if request_id:
+                payload["request_id"] = request_id
             
             # Log del payload completo en el primer intento para debugging
             if len(messages_data) > 10 or total_chars > 10000:

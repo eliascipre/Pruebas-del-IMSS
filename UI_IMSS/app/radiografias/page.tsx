@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import ReactMarkdown from "react-markdown"
@@ -39,6 +39,10 @@ function RadiografiasPageContent() {
   const [radiografiaWidth, setRadiografiaWidth] = useState(384) // 96 * 4 = 384px (w-96)
   const [isResizing, setIsResizing] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [currentRequestId, setCurrentRequestId] = useState<string | null>(null)
+  const [abortController, setAbortController] = useState<AbortController | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const lastEnterTimeRef = useRef<number>(0)
 
   const getBackendUrl = useMemo(() => {
     return () => {
@@ -101,7 +105,42 @@ function RadiografiasPageContent() {
     }
   }
 
-  useEffect(() => { fetchConversations() }, [userId])
+  useEffect(() => { 
+    if (userId) {
+      fetchConversations()
+      // Cargar última conversación si existe
+      const lastSessionId = sessionStorage.getItem('last_session_id')
+      if (lastSessionId && !sessionId) {
+        setSessionId(lastSessionId)
+        // Cargar historial de la última conversación
+        const backendUrl = getBackendUrl()
+        const headers = getAuthHeaders()
+        fetch(`${backendUrl}/api/history?session_id=${lastSessionId}&user_id=${userId}`, {
+          headers: headers
+        })
+          .then(res => res.json())
+          .then(data => {
+            const historyMessages: Message[] = (data.messages || [])
+              .filter((m: any) => m.content && m.content.trim())
+              .map((m: any) => ({
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                text: m.content || ''
+              }))
+            const uniqueMessages: Message[] = []
+            for (let i = 0; i < historyMessages.length; i++) {
+              const current = historyMessages[i]
+              const previous = uniqueMessages[uniqueMessages.length - 1]
+              if (!previous || previous.role !== current.role || previous.text !== current.text) {
+                uniqueMessages.push(current)
+              }
+            }
+            setMessages(uniqueMessages)
+          })
+          .catch(e => console.error('Error cargando última conversación:', e))
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   // Manejo del redimensionamiento del panel de radiografía
   useEffect(() => {
@@ -222,8 +261,54 @@ function RadiografiasPageContent() {
     setImagePreview(null)
   }
 
+  const handleStopGeneration = async () => {
+    if (!isLoading || !currentRequestId) return
+    
+    try {
+      const backendUrl = getBackendUrl()
+      await fetch(`${backendUrl}/api/analyze/cancel`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          request_id: currentRequestId,
+          session_id: sessionId || undefined,
+        }),
+      })
+      
+      // Cancelar también el AbortController si existe
+      if (abortController) {
+        abortController.abort()
+        setAbortController(null)
+      }
+      
+      // Limpiar estados
+      setCurrentRequestId(null)
+      setIsLoading(false)
+      
+      // Actualizar el mensaje del asistente para indicar que se canceló
+      setMessages((prev) => {
+        const newMessages = [...prev]
+        if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'assistant') {
+          const currentText = newMessages[newMessages.length - 1].text
+          newMessages[newMessages.length - 1] = {
+            role: 'assistant',
+            text: currentText ? currentText + '\n\n[Generación cancelada por el usuario]' : '[Generación cancelada por el usuario]'
+          }
+        }
+        return newMessages
+      })
+    } catch (error) {
+      console.error('Error cancelando generación:', error)
+    }
+  }
+
   const handleSendMessage = async () => {
-    if (!input.trim() && !selectedImage) return
+    // Validación: Requerir imagen de radiografía de tórax
+    if (!selectedImage) {
+      alert('Por favor, sube una imagen de radiografía de tórax antes de enviar tu consulta.')
+      return
+    }
+    
     if (isLoading) return
 
     const userMessage = input.trim() || "Analiza esta radiografía de tórax, describe los hallazgos principales, las anomalías, los dispositivos de soporte y ofrece recomendaciones clínicas. Responde en español."
@@ -232,6 +317,10 @@ function RadiografiasPageContent() {
     const imageToSend = selectedImage
     setSelectedImage(null)
     setIsLoading(true)
+
+    // Crear AbortController para cancelar la petición
+    const controller = new AbortController()
+    setAbortController(controller)
 
     setMessages(prev => [...prev, { 
       role: 'user', 
@@ -267,15 +356,27 @@ function RadiografiasPageContent() {
 
       setMessages((prev) => [...prev, { role: "assistant", text: "" }])
 
-      const response = await fetch(`${getBackendUrl()}/api/analyze`, {
+      // Generar request_id único
+      const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      setCurrentRequestId(requestId)
+
+      // Guardar session_id en sessionStorage para cargar al recargar
+      if (currentSession) {
+        sessionStorage.setItem('last_session_id', currentSession)
+      }
+
+      const backendUrl = getBackendUrl()
+      const response = await fetch(`${backendUrl}/api/analyze`, {
         method: 'POST',
         headers: getAuthHeaders(),
+        signal: controller.signal,
         body: JSON.stringify({
           message: userMessage,
           image: imageToSend,
           image_format: 'jpeg',
           session_id: currentSession || undefined,
           user_id: userId || undefined,
+          request_id: requestId, // Enviar request_id para poder cancelar
         }),
       })
 
@@ -285,7 +386,11 @@ function RadiografiasPageContent() {
           const errorData = await response.json()
           errorMessage = errorData.detail || errorData.error || errorMessage
         } catch (e) {
+          if (response.status === 404) {
+            errorMessage = `Error: El servidor de análisis no está disponible (404). Por favor, verifica que el servidor esté ejecutándose en ${backendUrl}`
+          } else {
           errorMessage = `Error ${response.status}: ${response.statusText}`
+          }
         }
         throw new Error(errorMessage)
       }
@@ -307,7 +412,13 @@ function RadiografiasPageContent() {
       })
 
       fetchConversations()
-    } catch (error) {
+    } catch (error: any) {
+      // Ignorar errores de abort
+      if (error.name === 'AbortError') {
+        console.log('Petición cancelada por el usuario')
+        return
+      }
+      
       console.error('Error:', error)
       
       let errorMessage = 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.'
@@ -335,14 +446,66 @@ function RadiografiasPageContent() {
       })
     } finally {
       setIsLoading(false)
+      setCurrentRequestId(null)
+      setAbortController(null)
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
+  // Ajustar altura del textarea automáticamente
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`
     }
+  }
+
+  useEffect(() => {
+    adjustTextareaHeight()
+  }, [input])
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
+      const now = Date.now()
+      const timeSinceLastEnter = now - lastEnterTimeRef.current
+      
+      // Si es un Enter doble (dos Enter seguidos en menos de 500ms)
+      // Verificar si el texto termina con un salto de línea o si es el segundo Enter rápido
+      if (timeSinceLastEnter < 500 && timeSinceLastEnter > 0) {
+        // Si el texto termina con salto de línea, es un Enter doble
+        if (input.endsWith('\n')) {
+      e.preventDefault()
+          // Remover el salto de línea extra antes de enviar
+          const textToSend = input.trimEnd()
+          if (textToSend || selectedImage) {
+            // Solo enviar si hay imagen
+            if (selectedImage) {
+              lastEnterTimeRef.current = 0
+              // Usar setTimeout para permitir que el textarea procese el cambio
+              setTimeout(() => {
+      handleSendMessage()
+              }, 0)
+            } else {
+              alert('Por favor, sube una imagen de radiografía de tórax antes de enviar tu consulta.')
+              lastEnterTimeRef.current = 0
+            }
+          } else {
+            lastEnterTimeRef.current = 0
+          }
+        } else {
+          // Primer Enter, permitir que se inserte el salto de línea
+          lastEnterTimeRef.current = now
+        }
+      } else {
+        // Enter simple = salto de línea (comportamiento normal del textarea)
+        lastEnterTimeRef.current = now
+      }
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value)
+    adjustTextareaHeight()
   }
 
   const handleNewChat = async () => {
@@ -494,6 +657,7 @@ function RadiografiasPageContent() {
                 <div className="flex items-center gap-2">
                   <button onClick={async () => {
                     setSessionId(c.id)
+                    sessionStorage.setItem('last_session_id', c.id)
                     setMessages([])
                     try {
                       const res = await fetch(`${getBackendUrl()}/api/history?session_id=${c.id}&user_id=${userId}`, {
@@ -649,6 +813,7 @@ function RadiografiasPageContent() {
                             <div className="flex items-center gap-2">
                               <button onClick={async () => {
                                 setSessionId(c.id)
+                                sessionStorage.setItem('last_session_id', c.id)
                                 setSidebarOpen(false)
                                 setMessages([])
                                 try {
@@ -725,8 +890,8 @@ function RadiografiasPageContent() {
                 </SheetContent>
               </Sheet>
             </div>
-            <div className="flex items-center gap-2">
-              <Image src="/IMSS.png" alt="IMSS" width={60} height={40} className="h-7 w-auto" />
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Image src="/IMSS.png" alt="IMSS" width={400} height={100} className="h-14 md:h-20 lg:h-24 w-auto" />
             </div>
           </div>
           <div className="hidden md:flex items-center justify-between w-full">
@@ -924,24 +1089,39 @@ function RadiografiasPageContent() {
                       className="hidden"
                       disabled={isLoading}
                     />
-                    <input
-                      type="text"
+                    <textarea
+                      ref={textareaRef}
                       value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Escribe tu consulta sobre la radiografía..."
-                      className="flex-1 bg-transparent outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm sm:text-base"
-                      disabled={isLoading}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      placeholder={selectedImage ? "Escribe tu consulta sobre la radiografía... (Enter para nueva línea, Enter doble para enviar)" : "Primero sube una radiografía de tórax..."}
+                      className="flex-1 bg-transparent outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm sm:text-base resize-none overflow-y-auto min-h-[2.5rem] max-h-[200px] py-2"
+                      disabled={isLoading || !selectedImage}
+                      rows={1}
+                      style={{ height: 'auto' }}
                     />
+                    {isLoading ? (
+                      <button 
+                        onClick={handleStopGeneration}
+                        className="w-9 h-9 sm:w-10 sm:h-10 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                        title="Detener generación"
+                      >
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 6h12v12H6z" />
+                        </svg>
+                      </button>
+                    ) : (
                     <button 
                       onClick={handleSendMessage}
-                      disabled={isLoading || (!input.trim() && !selectedImage)}
+                        disabled={isLoading || !selectedImage}
                       className="w-9 h-9 sm:w-10 sm:h-10 bg-[#068959] rounded-full flex items-center justify-center hover:bg-[#057a4a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={!selectedImage ? "Primero debes subir una radiografía de tórax" : "Enviar consulta"}
                     >
                       <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                       </svg>
                     </button>
+                    )}
                   </div>
                 </div>
               </div>

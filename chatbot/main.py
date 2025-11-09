@@ -15,6 +15,7 @@ import asyncio
 import os
 import time
 import html
+import httpx
 
 # Importar módulos
 from memory_manager import get_memory_manager
@@ -39,24 +40,23 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configurar CORS para permitir conexiones remotas
-# Permitir conexiones desde cualquier origen para desarrollo remoto
-# En producción, configurar con lista específica de orígenes permitidos
+# Configurar CORS para permitir conexiones desde localhost
+# Permitir conexiones desde localhost:3000 (Next.js) y localhost:3001, etc.
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
 if CORS_ORIGINS == "*":
     # Cuando allow_origins=["*"], allow_credentials debe ser False
     # Esto permite todos los orígenes sin credenciales (adecuado para desarrollo)
     allow_origins = ["*"]
     allow_credentials = False
-    allow_methods = ["*"]
-    allow_headers = ["*"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"]
+    allow_headers = ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With", "Access-Control-Request-Method", "Access-Control-Request-Headers"]
 else:
     # Con orígenes específicos, podemos usar allow_credentials=True
     # pero debemos especificar métodos y headers explícitamente (no usar "*")
     allow_origins = [origin.strip() for origin in CORS_ORIGINS.split(",")]
     allow_credentials = True
-    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
-    allow_headers = ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"]
+    allow_headers = ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With", "Access-Control-Request-Method", "Access-Control-Request-Headers"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -64,6 +64,8 @@ app.add_middleware(
     allow_credentials=allow_credentials,
     allow_methods=allow_methods,
     allow_headers=allow_headers,
+    expose_headers=["*"],
+    max_age=600,
 )
 
 # Inicializar componentes
@@ -72,6 +74,9 @@ auth_manager = get_auth_manager()
 security = HTTPBearer()
 security_manager = get_security_manager()
 rate_limiter = get_rate_limiter()
+
+# Diccionario para rastrear generaciones activas: {request_id: {"session_id": str, "user_id": str, "vllm_request_id": str}}
+active_requests: Dict[str, Dict[str, Any]] = {}
 
 # Configurar endpoint de vLLM desde variables de entorno
 # Prioridad: VLLM_ENDPOINT > OLLAMA_ENDPOINT > LM_STUDIO_URL (para compatibilidad)
@@ -113,6 +118,12 @@ class ChatRequest(BaseModel):
     user_id: Optional[str] = None
     stream: bool = False
     json_mode: bool = False
+    request_id: Optional[str] = None
+
+
+class CancelRequest(BaseModel):
+    request_id: str
+    session_id: Optional[str] = None
 
 
 class ImageAnalysisRequest(BaseModel):
@@ -127,6 +138,11 @@ class TranscriptionRequest(BaseModel):
     audio_data: str
     audio_format: str = "webm"
     language: Optional[str] = "es"
+
+
+class TTSRequest(BaseModel):
+    text: str
+    speaker_id: Optional[str] = "ash"  # Opciones: nova, ballad, ash
 
 
 class ChatResponse(BaseModel):
@@ -266,7 +282,10 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
                 detail=f"Demasiadas peticiones. Intenta de nuevo en un momento. Peticiones restantes: {remaining}"
             )
         
-        logger.info(f"📥 Nuevo mensaje - User: {user.get('email')}, Session: {req.session_id}, Tiene imagen: {req.image is not None}")
+        # Generar request_id si no se proporciona
+        request_id = req.request_id or f"req-{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}"
+        
+        logger.info(f"📥 Nuevo mensaje - User: {user.get('email')}, Session: {req.session_id}, Request ID: {request_id}, Tiene imagen: {req.image is not None}")
         
         # Validar que haya mensaje o imagen
         if not req.message and not req.image:
@@ -281,7 +300,18 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
             req.message = sanitized
         
         # Generar session_id si no existe
-        session_id = req.session_id or str(uuid.uuid4())
+        # Si no hay session_id pero hay user_id, intentar usar la última conversación del usuario
+        if not req.session_id and req.user_id:
+            last_session_id = memory_manager.get_last_conversation(req.user_id)
+            if last_session_id:
+                session_id = last_session_id
+                logger.info(f"🔄 Usando última conversación del usuario: {session_id[:8]}...")
+            else:
+                session_id = str(uuid.uuid4())
+                logger.info(f"🆕 Creando nueva conversación: {session_id[:8]}...")
+        else:
+            session_id = req.session_id or str(uuid.uuid4())
+        
         # Asegurar conversación si viene user_id
         if req.user_id:
             memory_manager.ensure_conversation(req.user_id, session_id)
@@ -438,55 +468,116 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
                     session_id=session_id
                 )
             else:
-                start_ts = int(time.time() * 1000)
-                response = await medical_chain.process_chat(req.message, session_id)
-                # Persistir respuesta del asistente
+                # Registrar request activo
+                # El request_id del frontend se usa como vllm_request_id también
+                active_requests[request_id] = {
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "vllm_request_id": request_id,  # Usar el mismo request_id para vLLM
+                }
+                
                 try:
-                    memory_manager.add_message_to_conversation(session_id, "assistant", response or "")
-                except Exception as _e:
-                    logger.warning(f"⚠️ No se pudo persistir respuesta del asistente (texto): {_e}")
-                try:
-                    end_ts = int(time.time() * 1000)
-                    # Intentar estimar tokens (usage)
+                    start_ts = int(time.time() * 1000)
+                    response = await medical_chain.process_chat(req.message, session_id, request_id=request_id)
+                    
+                    # Persistir respuesta del asistente
                     try:
-                        messages = await medical_chain.build_context_messages(req.message, use_entities=True)
-                        usage = await medical_chain.estimate_usage_from_messages(messages)
-                        input_tokens = usage.get('input_tokens')
-                        output_tokens = usage.get('output_tokens')
-                        total_tokens = usage.get('total_tokens')
-                    except Exception:
-                        input_tokens = output_tokens = total_tokens = None
-                    memory_manager.log_chat_metrics(
-                        session_id=session_id,
-                        input_chars=len(req.message or ''),
-                        output_chars=len(response or ''),
-                        input_tokens=input_tokens,
-                        output_tokens=output_tokens,
-                        total_tokens=total_tokens,
-                        started_at=start_ts,
-                        ended_at=end_ts,
-                        duration_ms=end_ts - start_ts,
-                        model=usage.get('model') if 'usage' in locals() and usage.get('model') else 'google/medgemma-27b-it',
-                        provider='vllm',
-                        stream=False,
-                        is_image=False,
-                        success=True,
+                        memory_manager.add_message_to_conversation(session_id, "assistant", response or "")
+                    except Exception as _e:
+                        logger.warning(f"⚠️ No se pudo persistir respuesta del asistente (texto): {_e}")
+                    
+                    try:
+                        end_ts = int(time.time() * 1000)
+                        # Intentar estimar tokens (usage)
+                        try:
+                            messages = await medical_chain.build_context_messages(req.message, use_entities=True)
+                            usage = await medical_chain.estimate_usage_from_messages(messages)
+                            input_tokens = usage.get('input_tokens')
+                            output_tokens = usage.get('output_tokens')
+                            total_tokens = usage.get('total_tokens')
+                        except Exception:
+                            input_tokens = output_tokens = total_tokens = None
+                        memory_manager.log_chat_metrics(
+                            session_id=session_id,
+                            input_chars=len(req.message or ''),
+                            output_chars=len(response or ''),
+                            input_tokens=input_tokens,
+                            output_tokens=output_tokens,
+                            total_tokens=total_tokens,
+                            started_at=start_ts,
+                            ended_at=end_ts,
+                            duration_ms=end_ts - start_ts,
+                            model=usage.get('model') if 'usage' in locals() and usage.get('model') else 'google/medgemma-27b-it',
+                            provider='vllm',
+                            stream=False,
+                            is_image=False,
+                            success=True,
+                        )
+                    except Exception as _e:
+                        logger.warning(f"⚠️ No se pudieron registrar métricas (texto): {_e}")
+                    
+                    # Validar y sanitizar salida (LLM05: Manejo Inadecuado de Salidas, LLM07: Filtración de Prompts)
+                    validated_response = security_manager.validate_output(response)
+                    
+                    return ChatResponse(
+                        response=validated_response,
+                        session_id=session_id
                     )
-                except Exception as _e:
-                    logger.warning(f"⚠️ No se pudieron registrar métricas (texto): {_e}")
-                
-                # Validar y sanitizar salida (LLM05: Manejo Inadecuado de Salidas, LLM07: Filtración de Prompts)
-                validated_response = security_manager.validate_output(response)
-                
-                return ChatResponse(
-                    response=validated_response,
-                    session_id=session_id
-                )
+                finally:
+                    # Limpiar request activo
+                    if request_id in active_requests:
+                        del active_requests[request_id]
             
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"❌ Error en chat_endpoint: {e}")
+        # Limpiar request activo en caso de error
+        if request_id in active_requests:
+            del active_requests[request_id]
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/chat/cancel")
+async def cancel_chat_endpoint(req: CancelRequest, user: Dict[str, Any] = Depends(require_auth)):
+    """Endpoint para cancelar una generación activa"""
+    try:
+        user_id = user.get('user_id') or user.get('id', 'unknown')
+        
+        # Verificar que el request existe y pertenece al usuario
+        if req.request_id not in active_requests:
+            return {"success": False, "error": "Request no encontrado o ya completado"}
+        
+        request_info = active_requests[req.request_id]
+        
+        # Validar que el request pertenece al usuario
+        if request_info.get("user_id") != user_id:
+            raise HTTPException(status_code=403, detail="No autorizado para cancelar este request")
+        
+        # Si hay vllm_request_id, cancelar en vLLM
+        vllm_request_id = request_info.get("vllm_request_id")
+        if vllm_request_id:
+            try:
+                # Llamar al endpoint de cancelación de vLLM
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    # Construir URL correcta: quitar /v1/ del final si existe
+                    base_url = VLLM_ENDPOINT.rstrip('/v1/').rstrip('/')
+                    cancel_url = f"{base_url}/v1/requests/{vllm_request_id}/cancel"
+                    await client.post(cancel_url)
+                    logger.info(f"✅ Cancelación enviada a vLLM para request_id: {req.request_id}")
+            except Exception as e:
+                logger.warning(f"⚠️ Error cancelando en vLLM: {e}")
+        
+        # Limpiar request activo
+        del active_requests[req.request_id]
+        
+        logger.info(f"🛑 Generación cancelada - Request ID: {req.request_id}, User: {user.get('email')}")
+        return {"success": True, "message": "Generación cancelada exitosamente"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error cancelando generación: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -656,6 +747,153 @@ async def transcribe_endpoint(req: TranscriptionRequest, user: Dict[str, Any] = 
         raise
     except Exception as e:
         logger.error(f"❌ Error en transcripción: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Instancia global de KaniTTS (cargada bajo demanda)
+_kani_tts_model = None
+
+
+def get_kani_tts_model():
+    """
+    Obtener instancia de KaniTTS (singleton)
+    
+    El modelo se descarga automáticamente la primera vez desde Hugging Face
+    y se guarda en el cache local (~/.cache/huggingface/).
+    En ejecuciones posteriores, se carga desde el cache local.
+    """
+    global _kani_tts_model
+    if _kani_tts_model is None:
+        try:
+            from kani_tts import KaniTTS
+            import torch
+            import os
+            from pathlib import Path
+            
+            # Forzar CPU (no usar GPU)
+            device = "cpu"
+            
+            # Verificar si el modelo ya está en cache local
+            cache_dir = os.path.expanduser("~/.cache/huggingface")
+            model_name = "nineninesix/kani-tts-400m-es"
+            model_cache_path = Path(cache_dir) / "hub" / model_name.replace("/", "--")
+            
+            if model_cache_path.exists():
+                logger.info(f"🔊 Cargando KaniTTS desde cache local: {model_cache_path}")
+            else:
+                logger.info(f"🔊 Descargando KaniTTS por primera vez (se guardará en: {cache_dir})")
+                logger.info(f"📦 Esto puede tardar varios minutos dependiendo de tu conexión...")
+            
+            # Cargar modelo con configuración para CPU
+            # KaniTTS automáticamente usa el cache de Hugging Face si el modelo ya existe
+            _kani_tts_model = KaniTTS(
+                model_name,
+                temperature=0.7,
+                top_p=0.9,
+                max_new_tokens=2000,
+                repetition_penalty=1.2,
+                suppress_logs=True,
+                show_info=False,
+            )
+            
+            # Forzar CPU explícitamente si el modelo tiene atributo device
+            if hasattr(_kani_tts_model, 'model') and hasattr(_kani_tts_model.model, 'to'):
+                _kani_tts_model.model.to(device)
+            
+            # Verificar que el modelo se guardó en cache
+            if model_cache_path.exists():
+                logger.info(f"✅ KaniTTS inicializado correctamente en CPU (cache: {model_cache_path})")
+            else:
+                logger.info(f"✅ KaniTTS inicializado correctamente en CPU")
+        except ModuleNotFoundError as e:
+            if 'nemo' in str(e).lower():
+                error_msg = (
+                    "El módulo 'nemo' (NVIDIA NeMo) no está instalado. "
+                    "KaniTTS requiere nemo-toolkit. "
+                    "Instala las dependencias con: pip install nemo-toolkit[all] "
+                    "o ejecuta: pip install kani-tts (instala todas las dependencias)"
+                )
+                logger.error(f"❌ Error inicializando KaniTTS: {error_msg}")
+                raise ModuleNotFoundError(error_msg) from e
+            else:
+                error_msg = f"Dependencia faltante: {e}. Instala las dependencias necesarias."
+                logger.error(f"❌ Error inicializando KaniTTS: {error_msg}")
+                raise ModuleNotFoundError(error_msg) from e
+        except ImportError as e:
+            error_msg = f"Error importando KaniTTS: {e}. Verifica que kani-tts esté instalado correctamente."
+            logger.error(f"❌ Error inicializando KaniTTS: {error_msg}")
+            raise ImportError(error_msg) from e
+        except Exception as e:
+            logger.error(f"❌ Error inicializando KaniTTS: {e}", exc_info=True)
+            raise
+    else:
+        logger.debug("♻️ Reutilizando instancia existente de KaniTTS (ya cargado en memoria)")
+    return _kani_tts_model
+
+
+@app.post("/api/tts")
+async def tts_endpoint(req: TTSRequest, user: Dict[str, Any] = Depends(require_auth)):
+    """Endpoint para generar audio desde texto usando KaniTTS (CPU)"""
+    try:
+        logger.info(f"🔊 Generando audio TTS - User: {user.get('email')}, Texto: {req.text[:50]}...")
+        
+        # Validar que el texto no esté vacío
+        if not req.text or not req.text.strip():
+            raise HTTPException(status_code=400, detail="El texto no puede estar vacío")
+        
+        # Limitar longitud del texto (máximo 2000 caracteres para evitar problemas)
+        text = req.text.strip()[:2000]
+        
+        # Obtener modelo KaniTTS
+        try:
+            model = get_kani_tts_model()
+        except (ModuleNotFoundError, ImportError) as e:
+            error_detail = (
+                "El servicio de Text-to-Speech no está disponible. "
+                "Faltan dependencias necesarias. "
+                "Por favor, instala nemo-toolkit ejecutando: pip install nemo-toolkit[all] "
+                "o reinstala kani-tts con todas sus dependencias: pip install kani-tts"
+            )
+            logger.error(f"❌ Error en TTS (dependencias faltantes): {e}")
+            raise HTTPException(status_code=503, detail=error_detail)
+        
+        # Generar audio
+        # Usar speaker_id si está disponible
+        try:
+            if hasattr(model, 'speaker_list') and req.speaker_id in (model.speaker_list or []):
+                audio, processed_text = model(text, speaker_id=req.speaker_id)
+            else:
+                audio, processed_text = model(text)
+        except Exception as e:
+            logger.error(f"❌ Error generando audio: {e}")
+            raise HTTPException(status_code=500, detail=f"Error generando audio: {str(e)}")
+        
+        # Convertir audio a base64 para enviarlo al frontend
+        import base64
+        import io
+        import soundfile as sf
+        
+        # Guardar audio en buffer en memoria
+        buffer = io.BytesIO()
+        sf.write(buffer, audio, model.sample_rate, format='WAV')
+        buffer.seek(0)
+        
+        # Convertir a base64
+        audio_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+        
+        logger.info(f"✅ Audio generado exitosamente - Tamaño: {len(audio_base64)} caracteres base64")
+        
+        return {
+            "success": True,
+            "audio_data": audio_base64,
+            "sample_rate": model.sample_rate,
+            "format": "wav",
+            "text": processed_text
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error en TTS: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

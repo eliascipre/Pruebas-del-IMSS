@@ -13,6 +13,8 @@ const nextConfig = {
   },
   // Configuración de Turbopack (Next.js 16 usa Turbopack por defecto)
   turbopack: {},
+  // Permitir acceso desde la red local (elimina el warning de cross-origin)
+  allowedDevOrigins: ['10.105.20.1', 'localhost', '127.0.0.1'],
   // Configuración para acceso desde red local
   // Permitir acceso desde cualquier IP en desarrollo (incluyendo túneles SSH)
   async rewrites() {

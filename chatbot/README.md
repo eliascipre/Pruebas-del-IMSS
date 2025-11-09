@@ -42,6 +42,14 @@ graph TB
 - Descripción detallada de hallazgos
 - Sugerencias de diagnóstico diferencial
 
+### **Text-to-Speech (TTS)**
+- Generación de audio desde texto usando KaniTTS
+- Modelo: `nineninesix/kani-tts-400m-es` (400M parámetros)
+- Múltiples voces disponibles: `nova`, `ballad`, `ash`
+- Ejecución en CPU (no requiere GPU)
+- **Cache local automático**: El modelo se descarga la primera vez y se guarda en `~/.cache/huggingface/`
+- En ejecuciones posteriores, se carga automáticamente desde el cache local
+
 ### **Sistema de Memoria**
 - Memoria de conversación contextual
 - Persistencia de consultas anteriores
@@ -133,6 +141,28 @@ Conversación con streaming en tiempo real.
 
 **Response:** Server-Sent Events (SSE)
 
+### **POST /api/tts**
+Generar audio desde texto usando KaniTTS.
+
+**Request:**
+```json
+{
+  "text": "¡Hola! Soy Quetzalia Salud, tu asistente médico del IMSS.",
+  "speaker_id": "ash"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "audio_data": "base64_encoded_wav_audio",
+  "sample_rate": 22000,
+  "format": "wav",
+  "text": "¡Hola! Soy Quetzalia Salud, tu asistente médico del IMSS."
+}
+```
+
 ### **GET /api/health**
 Verificar estado del servicio.
 
@@ -146,6 +176,31 @@ Verificar estado del servicio.
 ```
 
 ## 🔧 Configuración Avanzada
+
+### **Modelo TTS (KaniTTS):**
+```python
+# El modelo se descarga automáticamente la primera vez
+# Ubicación del cache: ~/.cache/huggingface/hub/models--nineninesix--kani-tts-400m-es/
+
+# Configuración del modelo
+KANITTS_CONFIG = {
+    "model_name": "nineninesix/kani-tts-400m-es",
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "max_new_tokens": 2000,
+    "repetition_penalty": 1.2,
+    "device": "cpu"  # Forzado a CPU
+}
+
+# Voces disponibles
+SPEAKER_IDS = ["nova", "ballad", "ash"]  # Por defecto: "ash"
+```
+
+**Nota sobre el cache:**
+- Primera ejecución: El modelo se descarga desde Hugging Face (~400MB)
+- Ejecuciones posteriores: Se carga desde `~/.cache/huggingface/` (más rápido)
+- El cache se mantiene entre reinicios del servidor
+- Para forzar re-descarga, elimina la carpeta del cache
 
 ### **Modelos de IA:**
 ```python

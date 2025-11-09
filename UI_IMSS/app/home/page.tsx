@@ -26,18 +26,18 @@ function HomeContent() {
       {/* Header */}
       <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/home">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <Link href="/home" className="flex-shrink-0">
               <Image
                 src="/IMSS.png"
                 alt="IMSS"
-                width={80}
-                height={40}
-                className="h-8 md:h-10 w-auto"
+                width={400}
+                height={100}
+                className="h-14 md:h-20 lg:h-24 w-auto"
               />
             </Link>
           </div>
-          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
+          <nav className="hidden md:flex items-center gap-4 lg:gap-6 flex-shrink-0">
             <Link href="/home" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Inicio</Link>
             <Link href="/entornos" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Entornos</Link>
             <Link href="/integraciones" className="text-gray-700 dark:text-gray-300 hover:text-[#068959] dark:hover:text-[#0dab70] font-medium transition-colors">Integraciones</Link>
@@ -134,15 +134,6 @@ function HomeContent() {
                   className="object-contain w-[100px] md:w-[140px] h-auto"
                 />
               </div>
-              <div className="bg-white dark:bg-gray-900 px-6 md:px-10 py-4 md:py-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                <Image
-                  src="/logo_cipre_holding.png"
-                  alt="CIPRE Holding"
-                  width={130}
-                  height={35}
-                  className="object-contain w-[110px] md:w-[150px] h-auto"
-                />
-              </div>
             </div>
           </div>
         </section>
@@ -205,8 +196,44 @@ function HomeContent() {
           </div>
         </section>
 
-        {/* Section 3: Entornos de aprendizaje - image left, text right */}
+        {/* Section 3: Visor DICOM - text left, image right */}
         <section className="py-12 md:py-20 bg-white dark:bg-gray-900">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+              <div className="space-y-4 md:space-y-6 order-2 md:order-1">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[#068959] dark:text-[#0dab70] leading-tight">
+                  Visor DICOM
+                </h2>
+                <p className="text-gray-600 dark:text-gray-300 text-base md:text-lg leading-relaxed">
+                  Visualizador avanzado de imágenes DICOM con herramientas profesionales de análisis. Importa, visualiza y analiza archivos DICOM con controles de Window/Level, zoom y paneo. Integrado con MedGemma para análisis inteligente de imágenes médicas.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Link href="/dicom-ohif">
+                    <Button className="bg-[#068959] hover:bg-[#057a4a] text-white font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl w-full sm:w-auto">
+                      Visor OHIF (Recomendado)
+                    </Button>
+                  </Link>
+                  <Link href="/dicom">
+                    <Button variant="outline" className="font-semibold text-base px-6 md:px-8 py-4 md:py-6 rounded-xl w-full sm:w-auto">
+                      Visor Cornerstone
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl order-1 md:order-2">
+                <Image
+                  src="/chest-x-ray-radiography-with-green-holographic-ove.jpg"
+                  alt="Visor DICOM"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 4: Entornos de aprendizaje - image left, text right */}
+        <section className="py-12 md:py-20 bg-gray-50 dark:bg-gray-800">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
               <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
@@ -232,7 +259,7 @@ function HomeContent() {
           </div>
         </section>
 
-        {/* Section 4: Simulador de conversaciones - text left, image right */}
+        {/* Section 5: Simulador de conversaciones - text left, image right */}
         <section className="py-12 md:py-20 bg-gray-50 dark:bg-gray-800">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
