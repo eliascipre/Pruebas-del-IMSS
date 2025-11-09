@@ -340,10 +340,33 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
                 except Exception as _e:
                     logger.warning(f"⚠️ No se pudo persistir mensaje de usuario (imagen): {_e}")
 
+                # Obtener historial y contexto de entidades para análisis de imagen
+                conversation_history = []
+                entity_context = ""
+                try:
+                    # Obtener historial de conversación
+                    from langchain_system import get_medical_chain
+                    medical_chain_instance = get_medical_chain(VLLM_ENDPOINT)
+                    history = medical_chain_instance._get_chat_history(session_id)
+                    conversation_history = history.messages[-5:] if history.messages else []
+                    
+                    # Obtener contexto de entidades
+                    entity_context = await medical_chain_instance._get_entity_context_async()
+                    
+                    # Obtener system prompt
+                    system_prompt = medical_chain_instance.system_prompt
+                except Exception as e:
+                    logger.warning(f"⚠️ No se pudo obtener contexto de Langchain: {e}")
+                    system_prompt = None
+                
                 analysis_result = await analyze_image_with_fallback(
                     req.image,
                     req.image_format,
-                    req.message or "Analiza esta radiografía médica del IMSS"
+                    req.message or "Analiza esta radiografía médica del IMSS",
+                    session_id=session_id,
+                    conversation_history=conversation_history,
+                    entity_context=entity_context,
+                    system_prompt=system_prompt
                 )
                 
                 if not analysis_result.get('success'):
@@ -692,10 +715,34 @@ async def image_analysis_endpoint(req: ImageAnalysisRequest):
     try:
         logger.info("🔍 Analizando imagen")
         
+        # Obtener historial y contexto de entidades para análisis de imagen
+        conversation_history = []
+        entity_context = ""
+        system_prompt = None
+        try:
+            # Obtener historial de conversación si hay session_id
+            if req.session_id:
+                from langchain_system import get_medical_chain
+                medical_chain_instance = get_medical_chain(VLLM_ENDPOINT)
+                history = medical_chain_instance._get_chat_history(req.session_id)
+                conversation_history = history.messages[-5:] if history.messages else []
+                
+                # Obtener contexto de entidades
+                entity_context = await medical_chain_instance._get_entity_context_async()
+                
+                # Obtener system prompt
+                system_prompt = medical_chain_instance.system_prompt
+        except Exception as e:
+            logger.warning(f"⚠️ No se pudo obtener contexto de Langchain: {e}")
+        
         analysis_result = await analyze_image_with_fallback(
             req.image_data,
             req.image_format,
-            req.prompt
+            req.prompt,
+            session_id=req.session_id,
+            conversation_history=conversation_history,
+            entity_context=entity_context,
+            system_prompt=system_prompt
         )
         
         if not analysis_result.get('success'):

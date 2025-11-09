@@ -1342,10 +1342,10 @@ y tratamientos médicos. Responde en español."""
         })
     
     async def stream_medical_analysis(self, user_message: str, image_data: str, session_id: str = "") -> AsyncGenerator[str, None]:
-        """Procesar análisis médico de imágenes con streaming usando formato multimodal"""
+        """Procesar análisis médico de imágenes con streaming usando Ollama (medgemma-4b)"""
         try:
             # Importar funciones de compresión y validación
-            from medical_analysis import compress_image, validate_image_size
+            from medical_analysis import compress_image, validate_image_size, OLLAMA_ENDPOINT, OLLAMA_MODEL
             
             # Validar y comprimir imagen si es necesario
             is_valid, error_msg = validate_image_size(image_data)
@@ -1358,8 +1358,33 @@ y tratamientos médicos. Responde en español."""
                     yield f"Error: Imagen demasiado grande incluso después de compresión: {error_msg}"
                     return
             
-            # Construir prompt para análisis de imagen
-            analysis_prompt = f"""{self.system_prompt}
+            # Obtener historial y contexto de entidades
+            conversation_history = []
+            entity_context = ""
+            try:
+                history = self._get_chat_history(session_id)
+                conversation_history = history.messages[-5:] if history.messages else []
+                entity_context = await self._get_entity_context_async()
+            except Exception as e:
+                logger.warning(f"⚠️ No se pudo obtener contexto: {e}")
+            
+            # Construir prompt completo con contexto de entidades si existe
+            full_system_prompt = self.system_prompt
+            if entity_context:
+                full_system_prompt = f"{self.system_prompt}\n\n{entity_context}"
+            
+            # Agregar contexto de historial si existe
+            if conversation_history and len(conversation_history) > 0:
+                recent_history = conversation_history[-3:] if len(conversation_history) > 3 else conversation_history
+                history_text = "\n\n## Contexto de la conversación:\n"
+                for msg in recent_history:
+                    if hasattr(msg, 'content'):
+                        role = "Usuario" if hasattr(msg, '__class__') and 'Human' in str(type(msg)) else "Asistente"
+                        history_text += f"{role}: {msg.content}\n"
+                full_system_prompt = f"{full_system_prompt}\n{history_text}"
+            
+            # Construir prompt final para análisis de imagen
+            analysis_prompt = f"""{full_system_prompt}
 
 IMPORTANTE: El usuario ha compartido una radiografía/imagen médica.
 Analiza la imagen proporcionada y proporciona:
@@ -1369,61 +1394,49 @@ Analiza la imagen proporcionada y proporciona:
 4. Recomendaciones profesionales
 5. Siempre remitir a consulta médica del IMSS para confirmación
 
-Prompt del usuario: {user_message if user_message else 'Analiza esta radiografía médica'}"""
-
-            # Crear mensaje multimodal según formato de LangChain/OpenAI
-            user_prompt_text = user_message if user_message else "Analiza esta radiografía médica en detalle"
+Prompt del usuario: {user_message if user_message else 'Analiza esta radiografía médica en detalle'}"""
             
-            # Formato multimodal: content es un array con type: text y type: image_url
-            multimodal_content = [
-                {
-                    "type": "text",
-                    "text": user_prompt_text
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{image_data}"
-                    }
-                }
-            ]
-            
-            messages_data = [
-                {"role": "system", "content": analysis_prompt},
-                {"role": "user", "content": multimodal_content}
-            ]
-            
-            logger.info(f"🖼️ Enviando imagen multimodal a vLLM con Ray Serve...")
+            logger.info(f"🖼️ Enviando imagen a Ollama con streaming...")
             logger.info(f"📏 Tamaño de imagen base64: {len(image_data)} caracteres (~{len(image_data) // 4} tokens estimados)")
             
-            # Llamar a vLLM con streaming
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            # Preparar payload para Ollama con streaming
+            payload = {
+                "model": OLLAMA_MODEL,
+                "prompt": analysis_prompt,
+                "images": [image_data],  # Array de strings base64
+                "stream": True
+            }
+            
+            # Llamar a Ollama con streaming
+            async with httpx.AsyncClient(timeout=600.0) as client:  # 10 minutos de timeout
                 async with client.stream(
                     "POST",
-                    f"{self.llm.vllm_endpoint}chat/completions",
-                    json={
-                        "model": "google/medgemma-27b",
-                        "messages": messages_data,
-                        "temperature": 0.7,
-                        "max_tokens": 2048,  # Aumentado de 100 a 2048 para respuestas más completas
-                        "stream": True
-                    }
+                    f"{OLLAMA_ENDPOINT}/api/generate",
+                    json=payload
                 ) as response:
                     if response.status_code == 200:
-                        logger.info("✅ Respuesta streaming iniciada correctamente")
+                        logger.info("✅ Respuesta streaming iniciada correctamente desde Ollama")
                         async for line in response.aiter_lines():
-                            if line.startswith("data: ") and line.strip() != "data: [DONE]":
+                            if line.strip():
                                 try:
-                                    data = json.loads(line[6:])
-                                    if "choices" in data and len(data["choices"]) > 0:
-                                        delta_content = data["choices"][0].get("delta", {}).get("content", "")
+                                    data = json.loads(line)
+                                    # Ollama devuelve chunks en formato: {"response": "texto", "done": false}
+                                    if "response" in data:
+                                        delta_content = data.get("response", "")
                                         if delta_content:
                                             yield delta_content
-                                except:
-                                    pass
+                                    # Si done es true, terminar
+                                    if data.get("done", False):
+                                        break
+                                except json.JSONDecodeError:
+                                    # Ignorar líneas que no son JSON válido
+                                    continue
+                                except Exception as e:
+                                    logger.warning(f"⚠️ Error procesando chunk: {e}")
+                                    continue
                     else:
                         error_text = await response.aread()
-                        logger.error(f"❌ Error en vLLM: {response.status_code} - {error_text}")
+                        logger.error(f"❌ Error en Ollama: {response.status_code} - {error_text}")
                         yield f"Error: No se pudo procesar la imagen ({response.status_code})"
             
         except Exception as e:

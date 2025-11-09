@@ -1,5 +1,6 @@
 """
-Sistema de análisis médico para imágenes - vLLM con Ray Serve
+Sistema de análisis médico para imágenes - Ollama para imágenes, vLLM para texto
+Usa Ollama (medgemma-4b) para análisis de imágenes manteniendo toda la arquitectura Langchain
 """
 
 import base64
@@ -13,9 +14,12 @@ import io
 
 logger = logging.getLogger(__name__)
 
-# Configuración - Prioridad: VLLM_ENDPOINT > OLLAMA_ENDPOINT > LM_STUDIO_ENDPOINT
-VLLM_ENDPOINT = os.getenv("VLLM_ENDPOINT", os.getenv("OLLAMA_ENDPOINT", os.getenv("LM_STUDIO_ENDPOINT", "http://localhost:8000/v1/")))
-# Asegurar que termine con /v1/ para compatibilidad con OpenAI API
+# Configuración para Ollama (imágenes)
+OLLAMA_ENDPOINT = os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_IMAGE_MODEL", "amsaravi/medgemma-4b-it:q8")
+
+# Configuración para vLLM (texto) - mantener para compatibilidad
+VLLM_ENDPOINT = os.getenv("VLLM_ENDPOINT", os.getenv("LM_STUDIO_ENDPOINT", "http://localhost:8000/v1/"))
 if not VLLM_ENDPOINT.endswith("/v1/"):
     if VLLM_ENDPOINT.endswith("/"):
         VLLM_ENDPOINT = VLLM_ENDPOINT + "v1/"
@@ -98,16 +102,51 @@ def validate_image_size(image_data: str) -> tuple[bool, Optional[str]]:
 
 
 class MedicalImageAnalysis:
-    """Sistema de análisis de imágenes médicas con vLLM con Ray Serve"""
+    """Sistema de análisis de imágenes médicas con Ollama (medgemma-4b) manteniendo arquitectura Langchain"""
     
-    def __init__(self):
-        logger.info(f"✅ Configurado para usar vLLM con Ray Serve en: {VLLM_ENDPOINT}")
-        logger.info(f"✅ Modelo: {MODEL_NAME}")
+    def __init__(self, system_prompt: Optional[str] = None):
+        self.system_prompt = system_prompt
+        logger.info(f"✅ Configurado para usar Ollama en: {OLLAMA_ENDPOINT}")
+        logger.info(f"✅ Modelo de imágenes: {OLLAMA_MODEL}")
     
-    async def analyze_with_ollama(self, image_data: str, prompt: str) -> Dict[str, Any]:
-        """Analizar imagen usando vLLM con Ray Serve con formato multimodal"""
+    def _load_medical_prompt(self) -> str:
+        """Cargar prompt médico desde archivo (igual que langchain_system.py)"""
         try:
-            logger.info(f"🤖 Analizando con vLLM: {MODEL_NAME}")
+            prompt_path = os.path.join(os.path.dirname(__file__), 'prompts', 'medico.md')
+            with open(prompt_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                # Extraer el system prompt principal
+                if '## System Prompt Principal' in content:
+                    start = content.find('## System Prompt Principal') + len('## System Prompt Principal')
+                    end = content.find('##', start)
+                    if end > start:
+                        return content[start:end].strip()
+                return content
+        except Exception as e:
+            logger.warning(f"⚠️ Error cargando prompt médico: {e}")
+        
+        # Fallback
+        return """Eres un asistente médico especializado del IMSS que proporciona información médica general, 
+interpretación de síntomas y guías de salud preventiva. 
+
+IMPORTANTE: Siempre recomiendas consultar con profesionales de la salud del IMSS para diagnósticos específicos 
+y tratamientos médicos. Responde en español."""
+    
+    async def analyze_with_ollama(self, image_data: str, prompt: str, session_id: Optional[str] = None, 
+                                  conversation_history: Optional[list] = None, 
+                                  entity_context: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Analizar imagen usando Ollama (medgemma-4b) manteniendo toda la arquitectura Langchain
+        
+        Args:
+            image_data: Imagen en base64
+            prompt: Prompt del usuario
+            session_id: ID de sesión para contexto
+            conversation_history: Historial de conversación (opcional)
+            entity_context: Contexto de entidades extraídas (opcional)
+        """
+        try:
+            logger.info(f"🤖 Analizando con Ollama: {OLLAMA_MODEL}")
             
             # Validar tamaño de imagen
             is_valid, error_msg = validate_image_size(image_data)
@@ -121,66 +160,80 @@ class MedicalImageAnalysis:
                     return {
                         "success": False,
                         "error": f"Imagen demasiado grande incluso después de compresión: {error_msg}",
-                        "provider": "vllm"
+                        "provider": "ollama"
                     }
             
             # Decodificar imagen para obtener metadata
             image_bytes = base64.b64decode(image_data)
             image_size = len(image_bytes)
             
-            # Crear el prompt médico mejorado
-            system_prompt = """Eres un radiólogo asistente especializado del IMSS.
-Analiza la imagen médica proporcionada y proporciona:
+            # Cargar system prompt (igual que langchain_system.py)
+            system_prompt = self.system_prompt or self._load_medical_prompt()
+            
+            # Construir prompt completo con contexto de entidades si existe
+            full_system_prompt = system_prompt
+            if entity_context:
+                full_system_prompt = f"{system_prompt}\n\n{entity_context}"
+            
+            # Agregar contexto de historial si existe
+            if conversation_history and len(conversation_history) > 0:
+                # Tomar últimos 3 mensajes del historial
+                recent_history = conversation_history[-3:] if len(conversation_history) > 3 else conversation_history
+                history_text = "\n\n## Contexto de la conversación:\n"
+                for msg in recent_history:
+                    if hasattr(msg, 'content'):
+                        role = "Usuario" if hasattr(msg, '__class__') and 'Human' in str(type(msg)) else "Asistente"
+                        history_text += f"{role}: {msg.content}\n"
+                full_system_prompt = f"{full_system_prompt}\n{history_text}"
+            
+            # Construir prompt final para análisis de imagen
+            analysis_prompt = f"""{full_system_prompt}
+
+IMPORTANTE: El usuario ha compartido una radiografía/imagen médica.
+Analiza la imagen proporcionada y proporciona:
 1. Descripción de estructuras anatómicas visibles
-2. Hallazgos normales y anormales
+2. Hallazgos normales vs anormales
 3. Posibles patologías o alteraciones
 4. Recomendaciones profesionales
-5. Siempre remitir a consulta médica para confirmación
+5. Siempre remitir a consulta médica del IMSS para confirmación
 
-Responde en español de manera detallada y profesional."""
+Prompt del usuario: {prompt if prompt else 'Analiza esta radiografía médica en detalle'}"""
             
-            # Preparar mensaje multimodal según formato LangChain
-            user_prompt_text = prompt if prompt else "Analiza esta radiografía médica en detalle"
+            logger.info(f"📏 Enviando imagen a Ollama (tamaño: {image_size} bytes)")
+            logger.info(f"📝 Prompt del usuario: {prompt[:100] if prompt else 'Sin prompt'}...")
             
-            # Formato multimodal: content es un array
-            multimodal_content = [
-                {
-                    "type": "text",
-                    "text": user_prompt_text
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{image_data}"
-                    }
-                }
-            ]
+            # Preparar payload para Ollama (formato del script de ejemplo)
+            # Formato: {"model": "...", "prompt": "...", "images": [base64_image], "stream": False}
+            payload = {
+                "model": OLLAMA_MODEL,
+                "prompt": analysis_prompt,
+                "images": [image_data],  # Array de strings base64
+                "stream": False
+            }
             
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": multimodal_content}
-            ]
-            
-            logger.info(f"📏 Enviando imagen (tamaño: {image_size} bytes) con formato multimodal")
-            
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            # Enviar petición a Ollama
+            async with httpx.AsyncClient(timeout=600.0) as client:  # 10 minutos de timeout para análisis de imágenes
+                logger.info(f"🚀 Enviando imagen a {OLLAMA_ENDPOINT}/api/generate")
                 response = await client.post(
-                    f"{VLLM_ENDPOINT}chat/completions",
-                    json={
-                        "model": MODEL_NAME,
-                        "messages": messages,
-                        "temperature": 0.7,
-                        "max_tokens": 2048,  # Aumentado de 100 a 2048 para respuestas más completas
-                        "stream": False
-                    }
+                    f"{OLLAMA_ENDPOINT}/api/generate",
+                    json=payload
                 )
                 
                 if response.status_code == 200:
                     result = response.json()
-                    analysis = result["choices"][0]["message"]["content"]
+                    analysis = result.get('response', '')
+                    
+                    if not analysis:
+                        logger.error(f"❌ No se recibió respuesta del modelo")
+                        logger.warning(f"Respuesta completa: {result}")
+                        return {
+                            "success": False,
+                            "error": "No se recibió respuesta del modelo",
+                            "provider": "ollama"
+                        }
                     
                     # Logging detallado de la respuesta
-                    logger.info(f"✅ vLLM response recibida (análisis multimodal)")
+                    logger.info(f"✅ Ollama response recibida (análisis de imagen)")
                     logger.info(f"📝 Respuesta del modelo (primeros 200 caracteres): {analysis[:200]}...")
                     logger.info(f"📊 Tamaño de la respuesta: {len(analysis)} caracteres")
                     
@@ -191,12 +244,12 @@ Responde en español de manera detallada y profesional."""
                     return {
                         "success": True,
                         "analysis": analysis,
-                        "model": MODEL_NAME,
-                        "provider": "vllm"
+                        "model": OLLAMA_MODEL,
+                        "provider": "ollama"
                     }
                 else:
                     error_text = response.text[:2000]  # Limitar tamaño del error
-                    logger.error(f"❌ Error en vLLM: {response.status_code}")
+                    logger.error(f"❌ Error en Ollama: {response.status_code}")
                     logger.error(f"📋 Detalles del error: {error_text}")
                     
                     # Intentar parsear error si es JSON
@@ -209,27 +262,63 @@ Responde en español de manera detallada y profesional."""
                     return {
                         "success": False,
                         "error": f"Error del servidor ({response.status_code}): {error_detail[:500]}",
-                        "provider": "vllm"
+                        "provider": "ollama"
                     }
+        except httpx.TimeoutException:
+            logger.error(f"❌ Timeout esperando respuesta de Ollama (más de 10 minutos)")
+            return {
+                "success": False,
+                "error": "Timeout esperando respuesta del servidor. El análisis de imágenes puede tardar varios minutos.",
+                "provider": "ollama"
+            }
         except Exception as e:
-            logger.error(f"❌ Error en análisis con vLLM: {str(e)}")
+            logger.error(f"❌ Error en análisis con Ollama: {str(e)}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 "success": False,
                 "error": str(e),
-                "provider": "vllm"
+                "provider": "ollama"
             }
     
-    async def analyze_with_fallback(self, image_data: str, image_format: str, prompt: str) -> Dict[str, Any]:
-        """Análisis de imagen con vLLM con Ray Serve"""
-        return await self.analyze_with_ollama(image_data, prompt)
+    async def analyze_with_fallback(self, image_data: str, image_format: str, prompt: str, 
+                                     session_id: Optional[str] = None,
+                                     conversation_history: Optional[list] = None,
+                                     entity_context: Optional[str] = None) -> Dict[str, Any]:
+        """Análisis de imagen con Ollama (medgemma-4b) manteniendo arquitectura Langchain"""
+        return await self.analyze_with_ollama(image_data, prompt, session_id, conversation_history, entity_context)
 
 
-# Instancia global
-medical_analyzer = MedicalImageAnalysis()
+# Instancia global (se inicializará con system_prompt cuando se necesite)
+_medical_analyzer: Optional[MedicalImageAnalysis] = None
 
 
-async def analyze_image_with_fallback(image_data: str, image_format: str, prompt: str) -> Dict[str, Any]:
-    """Función helper para análisis de imagen con vLLM con Ray Serve"""
-    return await medical_analyzer.analyze_with_fallback(image_data, image_format, prompt)
+def get_medical_analyzer(system_prompt: Optional[str] = None) -> MedicalImageAnalysis:
+    """Obtener instancia del analizador médico (singleton)"""
+    global _medical_analyzer
+    if _medical_analyzer is None:
+        _medical_analyzer = MedicalImageAnalysis(system_prompt=system_prompt)
+    elif system_prompt and not _medical_analyzer.system_prompt:
+        _medical_analyzer.system_prompt = system_prompt
+    return _medical_analyzer
+
+
+async def analyze_image_with_fallback(image_data: str, image_format: str, prompt: str, 
+                                       session_id: Optional[str] = None,
+                                       conversation_history: Optional[list] = None,
+                                       entity_context: Optional[str] = None,
+                                       system_prompt: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Función helper para análisis de imagen con Ollama manteniendo arquitectura Langchain
+    
+    Args:
+        image_data: Imagen en base64
+        image_format: Formato de la imagen (jpeg, png, etc.)
+        prompt: Prompt del usuario
+        session_id: ID de sesión para contexto
+        conversation_history: Historial de conversación (opcional)
+        entity_context: Contexto de entidades extraídas (opcional)
+        system_prompt: System prompt personalizado (opcional)
+    """
+    analyzer = get_medical_analyzer(system_prompt=system_prompt)
+    return await analyzer.analyze_with_fallback(image_data, image_format, prompt, session_id, conversation_history, entity_context)
