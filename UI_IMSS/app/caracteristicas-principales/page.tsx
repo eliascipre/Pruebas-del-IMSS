@@ -15,7 +15,7 @@ export default function CaracteristicasPrincipales() {
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <Link href="/" className="flex-shrink-0">
               <Image
-                src="/IMSS.png"
+                src="/logo_imss.png"
                 alt="IMSS"
                 width={400}
                 height={100}

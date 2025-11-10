@@ -17,6 +17,31 @@ import time
 import html
 import httpx
 
+
+class AbortController:
+    """Clase simple para simular AbortController de JavaScript en Python"""
+    def __init__(self):
+        self.signal = AbortSignal()
+    
+    def abort(self):
+        """Abortar la operación"""
+        self.signal.abort()
+
+
+class AbortSignal:
+    """Clase simple para simular AbortSignal de JavaScript en Python"""
+    def __init__(self):
+        self._aborted = False
+    
+    @property
+    def aborted(self) -> bool:
+        """Verificar si fue abortado"""
+        return self._aborted
+    
+    def abort(self):
+        """Marcar como abortado"""
+        self._aborted = True
+
 # Importar módulos
 from memory_manager import get_memory_manager
 from media_storage import media_storage
@@ -320,10 +345,19 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
         if req.image:
             logger.info("🖼️ Procesando imagen médica")
             
+            # Registrar request activo para cancelación (imágenes con Ollama)
+            active_requests[request_id] = {
+                "session_id": session_id,
+                "user_id": user_id,
+                "provider": "ollama",  # Indicar que es Ollama
+                "type": "image",  # Tipo de request
+                "abort_controller": None,  # Se asignará en process_image_stream
+            }
+            
             if req.stream:
                 # Streaming con imagen
                 return StreamingResponse(
-                    process_image_stream(req.message, req.image, session_id),
+                    process_image_stream(req.message, req.image, session_id, request_id),
                     media_type="text/event-stream",
                     headers={
                         'Cache-Control': 'no-cache',
@@ -359,15 +393,25 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
                     logger.warning(f"⚠️ No se pudo obtener contexto de Langchain: {e}")
                     system_prompt = None
                 
-                analysis_result = await analyze_image_with_fallback(
-                    req.image,
-                    req.image_format,
-                    req.message or "Analiza esta radiografía médica del IMSS",
-                    session_id=session_id,
-                    conversation_history=conversation_history,
-                    entity_context=entity_context,
-                    system_prompt=system_prompt
-                )
+                # Crear AbortController para cancelación
+                abort_controller = AbortController()
+                active_requests[request_id]["abort_controller"] = abort_controller
+                
+                try:
+                    analysis_result = await analyze_image_with_fallback(
+                        req.image,
+                        req.image_format,
+                        req.message or "Analiza esta radiografía médica del IMSS",
+                        session_id=session_id,
+                        conversation_history=conversation_history,
+                        entity_context=entity_context,
+                        system_prompt=system_prompt,
+                        abort_controller=abort_controller
+                    )
+                finally:
+                    # Limpiar request activo
+                    if request_id in active_requests:
+                        del active_requests[request_id]
                 
                 if not analysis_result.get('success'):
                     raise HTTPException(status_code=500, detail=analysis_result.get('error', 'Error analyzing image'))
@@ -491,11 +535,13 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
                     session_id=session_id
                 )
             else:
-                # Registrar request activo
+                # Registrar request activo para cancelación (texto con vLLM)
                 # El request_id del frontend se usa como vllm_request_id también
                 active_requests[request_id] = {
                     "session_id": session_id,
                     "user_id": user_id,
+                    "provider": "vllm",  # Indicar que es vLLM
+                    "type": "text",  # Tipo de request
                     "vllm_request_id": request_id,  # Usar el mismo request_id para vLLM
                 }
                 
@@ -577,19 +623,34 @@ async def cancel_chat_endpoint(req: CancelRequest, user: Dict[str, Any] = Depend
         if request_info.get("user_id") != user_id:
             raise HTTPException(status_code=403, detail="No autorizado para cancelar este request")
         
-        # Si hay vllm_request_id, cancelar en vLLM
-        vllm_request_id = request_info.get("vllm_request_id")
-        if vllm_request_id:
-            try:
-                # Llamar al endpoint de cancelación de vLLM
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    # Construir URL correcta: quitar /v1/ del final si existe
-                    base_url = VLLM_ENDPOINT.rstrip('/v1/').rstrip('/')
-                    cancel_url = f"{base_url}/v1/requests/{vllm_request_id}/cancel"
-                    await client.post(cancel_url)
-                    logger.info(f"✅ Cancelación enviada a vLLM para request_id: {req.request_id}")
-            except Exception as e:
-                logger.warning(f"⚠️ Error cancelando en vLLM: {e}")
+        provider = request_info.get("provider", "vllm")
+        
+        # Cancelar según el provider
+        if provider == "ollama":
+            # Para Ollama, cancelar usando AbortController
+            abort_controller = request_info.get("abort_controller")
+            if abort_controller:
+                try:
+                    abort_controller.abort()
+                    logger.info(f"✅ Cancelación enviada a Ollama para request_id: {req.request_id}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Error cancelando en Ollama: {e}")
+            else:
+                logger.warning(f"⚠️ No se encontró AbortController para request_id: {req.request_id}")
+        elif provider == "vllm":
+            # Para vLLM, usar el endpoint de cancelación
+            vllm_request_id = request_info.get("vllm_request_id")
+            if vllm_request_id:
+                try:
+                    # Llamar al endpoint de cancelación de vLLM
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        # Construir URL correcta: quitar /v1/ del final si existe
+                        base_url = VLLM_ENDPOINT.rstrip('/v1/').rstrip('/')
+                        cancel_url = f"{base_url}/v1/requests/{vllm_request_id}/cancel"
+                        await client.post(cancel_url)
+                        logger.info(f"✅ Cancelación enviada a vLLM para request_id: {req.request_id}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Error cancelando en vLLM: {e}")
         
         # Limpiar request activo
         del active_requests[req.request_id]
@@ -697,16 +758,35 @@ async def process_text_stream(message: str, session_id: str):
         yield f"data: {error_data}\n\n"
 
 
-async def process_image_stream(message: str, image_data: str, session_id: str):
-    """Procesar imagen con streaming"""
+async def process_image_stream(message: str, image_data: str, session_id: str, request_id: str):
+    """Procesar imagen con streaming con soporte para cancelación"""
     try:
-        async for chunk in medical_chain.stream_medical_analysis(message, image_data, session_id):
+        # Crear AbortController para cancelación
+        abort_controller = AbortController()
+        
+        # Registrar AbortController en active_requests
+        if request_id in active_requests:
+            active_requests[request_id]["abort_controller"] = abort_controller
+        
+        async for chunk in medical_chain.stream_medical_analysis(message, image_data, session_id, abort_controller=abort_controller):
+            # Verificar si fue cancelado
+            if abort_controller.signal.aborted:
+                logger.info(f"🛑 Streaming de imagen cancelado para request_id: {request_id}")
+                yield f"data: {json.dumps({'content': '', 'done': True, 'cancelled': True, 'session_id': session_id})}\n\n"
+                return
             yield f"data: {json.dumps({'content': chunk, 'done': False})}\n\n"
         
         yield f"data: {json.dumps({'content': '', 'done': True, 'session_id': session_id})}\n\n"
+    except asyncio.CancelledError:
+        logger.info(f"🛑 Streaming de imagen cancelado (CancelledError) para request_id: {request_id}")
+        yield f"data: {json.dumps({'content': '', 'done': True, 'cancelled': True, 'session_id': session_id})}\n\n"
     except Exception as e:
         logger.error(f"❌ Error en streaming de imagen: {e}")
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    finally:
+        # Limpiar request activo
+        if request_id in active_requests:
+            del active_requests[request_id]
 
 
 @app.post("/api/image-analysis")

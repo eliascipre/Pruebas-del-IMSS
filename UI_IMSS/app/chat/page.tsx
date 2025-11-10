@@ -912,7 +912,7 @@ function ChatPageContent() {
         <div className="p-6 border-b border-gray-200 dark:border-gray-800">
           <div className="flex flex-col items-center gap-3 mb-4">
             <Image
-              src="/IMSS.png"
+              src="/logo_imss.png"
               alt="IMSS"
               width={90}
               height={60}
@@ -1082,7 +1082,7 @@ function ChatPageContent() {
                 <div className="flex flex-col h-full">
                   <div className="p-6 border-b border-gray-200 dark:border-gray-800">
                     <div className="flex flex-col items-center gap-3 mb-4">
-                      <Image src="/IMSS.png" alt="IMSS" width={90} height={60} className="h-12 w-auto" />
+                      <Image src="/logo_imss.png" alt="IMSS" width={90} height={60} className="h-12 w-auto" />
                     </div>
                     <Button onClick={handleNewChat} className="w-full bg-[#068959] hover:bg-[#057a4a] text-white">+ Nuevo chat</Button>
                     <div className="mt-3">
@@ -1220,7 +1220,7 @@ function ChatPageContent() {
             </Sheet>
             </div>
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Image src="/IMSS.png" alt="IMSS" width={400} height={100} className="h-14 md:h-20 lg:h-24 w-auto" />
+              <Image src="/logo_imss.png" alt="IMSS" width={400} height={100} className="h-14 md:h-20 lg:h-24 w-auto" />
             </div>
           </div>
           {/* Desktop links */}
@@ -1308,14 +1308,14 @@ function ChatPageContent() {
                         <div className="max-w-full leading-relaxed markdown-content overflow-x-hidden pr-8">
                           {/* Mostrar animación "Quetzalia está pensando" si el mensaje está vacío y está cargando */}
                           {!msg.text && isLoading ? (
-                            <div className="flex items-center gap-2 text-gray-600">
+                            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
                               <Spinner className="w-4 h-4" />
                               <span className="text-sm italic">Quetzalia está pensando...</span>
                             </div>
                           ) : msg.text.includes('<table') || msg.text.includes('<div class="overflow-x-auto') || msg.text.includes('<thead') ? (
                             <div 
                               dangerouslySetInnerHTML={{ __html: msg.text }}
-                              className="max-w-full overflow-x-auto"
+                              className="max-w-full overflow-x-auto prose prose-gray dark:prose-invert [&_*]:text-gray-900 dark:[&_*]:text-gray-100 [&_table]:bg-white dark:[&_table]:bg-gray-800 [&_th]:bg-gray-100 dark:[&_th]:bg-gray-700 [&_th]:text-gray-900 dark:[&_th]:text-gray-100 [&_td]:text-gray-900 dark:[&_td]:text-gray-100 [&_td]:border-gray-300 dark:[&_td]:border-gray-700"
                             />
                           ) : (
                             <ReactMarkdown
@@ -1325,107 +1325,107 @@ function ChatPageContent() {
                               components={{
                                 // Estilos para párrafos
                                 p: ({ children }: { children?: React.ReactNode }) => (
-                                  <p className="mb-2 last:mb-0 break-words text-gray-900">{children}</p>
+                                  <p className="mb-2 last:mb-0 break-words text-gray-900 dark:text-gray-100">{children}</p>
                                 ),
                                 // Estilos para encabezados
                                 h1: ({ children }: { children?: React.ReactNode }) => (
-                                  <h1 className="text-2xl font-bold mb-3 mt-4 first:mt-0 text-gray-900">{children}</h1>
+                                  <h1 className="text-2xl font-bold mb-3 mt-4 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h1>
                                 ),
                                 h2: ({ children }: { children?: React.ReactNode }) => (
-                                  <h2 className="text-xl font-bold mb-2 mt-3 first:mt-0 text-gray-900">{children}</h2>
+                                  <h2 className="text-xl font-bold mb-2 mt-3 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h2>
                                 ),
                                 h3: ({ children }: { children?: React.ReactNode }) => (
-                                  <h3 className="text-lg font-bold mb-2 mt-2 first:mt-0 text-gray-900">{children}</h3>
+                                  <h3 className="text-lg font-bold mb-2 mt-2 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h3>
                                 ),
                                 h4: ({ children }: { children?: React.ReactNode }) => (
-                                  <h4 className="text-base font-bold mb-2 mt-2 first:mt-0 text-gray-900">{children}</h4>
+                                  <h4 className="text-base font-bold mb-2 mt-2 first:mt-0 text-gray-900 dark:text-gray-100">{children}</h4>
                                 ),
                                 // Estilos para listas
                                 ul: ({ children }: { children?: React.ReactNode }) => (
-                                  <ul className="list-disc list-inside mb-2 space-y-1 ml-4 text-gray-900">{children}</ul>
+                                  <ul className="list-disc list-inside mb-2 space-y-1 ml-4 text-gray-900 dark:text-gray-100">{children}</ul>
                                 ),
                                 ol: ({ children }: { children?: React.ReactNode }) => (
-                                  <ol className="list-decimal list-inside mb-2 space-y-1 ml-4 text-gray-900">{children}</ol>
+                                  <ol className="list-decimal list-inside mb-2 space-y-1 ml-4 text-gray-900 dark:text-gray-100">{children}</ol>
                                 ),
                                 li: ({ children }: { children?: React.ReactNode }) => (
-                                  <li className="break-words">{children}</li>
+                                  <li className="break-words text-gray-900 dark:text-gray-100">{children}</li>
                                 ),
                                 // Estilos para código
                                 code: ({ node, className, children, ...props }: any) => {
                                   const match = /language-(\w+)/.exec(className || "")
                                   const isInline = !match || (node as any)?.properties?.className?.includes('inline')
                                   return !isInline && match ? (
-                                    <pre className="bg-gray-800 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300">
-                                      <code className={className} {...props}>
+                                    <pre className="bg-gray-800 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300 dark:border-gray-700">
+                                      <code className={`${className} text-gray-100`} {...props}>
                                         {children}
                                       </code>
                                     </pre>
                                   ) : (
-                                    <code className="bg-gray-200 px-2 py-1 rounded text-sm font-mono border border-gray-300 text-gray-800" {...props}>
+                                    <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-sm font-mono border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200" {...props}>
                                       {children}
                                     </code>
                                   )
                                 },
                                 pre: ({ children }: { children?: React.ReactNode }) => (
-                                  <pre className="bg-gray-800 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300">
+                                  <pre className="bg-gray-800 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto mb-2 border border-gray-300 dark:border-gray-700 text-gray-100">
                                     {children}
                                   </pre>
                                 ),
                                 // Estilos para bloques de cita
                                 blockquote: ({ children }: { children?: React.ReactNode }) => (
-                                  <blockquote className="border-l-4 border-gray-400 pl-4 italic my-2 text-gray-700">
+                                  <blockquote className="border-l-4 border-gray-400 dark:border-gray-500 pl-4 italic my-2 text-gray-700 dark:text-gray-300">
                                     {children}
                                   </blockquote>
                                 ),
                                 // Estilos para texto en negrita
                                 strong: ({ children }: { children?: React.ReactNode }) => (
-                                  <strong className="font-bold text-gray-900">{children}</strong>
+                                  <strong className="font-bold text-gray-900 dark:text-gray-100">{children}</strong>
                                 ),
                                 // Estilos para texto en cursiva
                                 em: ({ children }: { children?: React.ReactNode }) => (
-                                  <em className="italic">{children}</em>
+                                  <em className="italic text-gray-900 dark:text-gray-100">{children}</em>
                                 ),
                                 // Estilos para enlaces
                                 a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
-                                  <a href={href} className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">
+                                  <a href={href} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">
                                     {children}
                                   </a>
                                 ),
                                 // Estilos para tablas
                                 table: ({ children, ...props }: any) => (
                                   <div className="overflow-x-auto my-4 w-full max-w-full">
-                                    <table className="min-w-full border-collapse border border-gray-300 bg-white table-auto max-w-full" {...props}>
+                                    <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 table-auto max-w-full" {...props}>
                                       {children}
                                     </table>
                                   </div>
                                 ),
                                 thead: ({ children, ...props }: any) => (
-                                  <thead className="bg-gray-100" {...props}>
+                                  <thead className="bg-gray-100 dark:bg-gray-700" {...props}>
                                     {children}
                                   </thead>
                                 ),
                                 tbody: ({ children, ...props }: any) => (
-                                  <tbody className="bg-white" {...props}>
+                                  <tbody className="bg-white dark:bg-gray-800" {...props}>
                                     {children}
                                   </tbody>
                                 ),
                                 tr: ({ children, ...props }: any) => (
-                                  <tr className="border-b border-gray-300 hover:bg-gray-50 transition-colors" {...props}>
+                                  <tr className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" {...props}>
                                     {children}
                                   </tr>
                                 ),
                                 th: ({ children, ...props }: any) => (
-                                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 bg-gray-100" {...props}>
+                                  <th className="border border-gray-300 dark:border-gray-700 px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-700" {...props}>
                                     {children}
                                   </th>
                                 ),
                                 td: ({ children, ...props }: any) => (
-                                  <td className="border border-gray-300 px-4 py-3 text-gray-900" {...props}>
+                                  <td className="border border-gray-300 dark:border-gray-700 px-4 py-3 text-gray-900 dark:text-gray-100" {...props}>
                                     {children}
                                   </td>
                                 ),
                                 hr: () => (
-                                  <hr className="my-4 border-gray-300" />
+                                  <hr className="my-4 border-gray-300 dark:border-gray-700" />
                                 ),
                               }}
                             >

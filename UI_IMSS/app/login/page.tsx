@@ -49,7 +49,7 @@ export default function LoginPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <Image
-              src="/IMSS.png"
+              src="/logo_imss.png"
               alt="IMSS"
               width={400}
               height={100}
@@ -99,10 +99,10 @@ export default function LoginPage() {
           {/* Left Side - Medical Technology Image (50% width) */}
           <div className="hidden lg:block lg:w-1/2 h-screen relative">
             <Image
-              src="/Rectangle%2091911.png"
-              alt="Tecnología de IA Médica"
+              src="/medical-professional.jpg"
+              alt="Profesional médico"
               fill
-              className="object-contain"
+              className="object-cover"
               priority
             />
           </div>
@@ -110,10 +110,10 @@ export default function LoginPage() {
           {/* Mobile Image */}
           <div className="lg:hidden w-full h-[300px] relative">
             <Image
-              src="/Rectangle%2091911.png"
-              alt="Tecnología de IA Médica"
+              src="/medical-professional.jpg"
+              alt="Profesional médico"
               fill
-              className="object-contain"
+              className="object-cover"
               priority
             />
           </div>
@@ -121,17 +121,6 @@ export default function LoginPage() {
           {/* Right Side - White Content (50% width) */}
           <div className="w-full lg:w-1/2 bg-white dark:bg-gray-900 flex items-center justify-start py-16 md:py-20 lg:py-0 lg:pl-12 xl:pl-16">
             <div className="w-full max-w-lg px-6 lg:px-0 space-y-6">
-              {/* Logo and Branding - Only PNG logo */}
-              <div className="mb-8">
-                <Image
-                  src="/quetzalia.png"
-                  alt="QuetzalIA"
-                  width={180}
-                  height={60}
-                  className="w-auto h-12 md:h-16"
-                />
-              </div>
-
               {/* Main Headline */}
               <div className="space-y-4">
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">

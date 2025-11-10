@@ -1341,7 +1341,7 @@ y tratamientos médicos. Responde en español."""
             "user_message": user_message,
         })
     
-    async def stream_medical_analysis(self, user_message: str, image_data: str, session_id: str = "") -> AsyncGenerator[str, None]:
+    async def stream_medical_analysis(self, user_message: str, image_data: str, session_id: str = "", abort_controller: Optional[Any] = None) -> AsyncGenerator[str, None]:
         """Procesar análisis médico de imágenes con streaming usando Ollama (medgemma-4b)"""
         try:
             # Importar funciones de compresión y validación
@@ -1407,37 +1407,52 @@ Prompt del usuario: {user_message if user_message else 'Analiza esta radiografí
                 "stream": True
             }
             
-            # Llamar a Ollama con streaming
-            async with httpx.AsyncClient(timeout=600.0) as client:  # 10 minutos de timeout
-                async with client.stream(
-                    "POST",
-                    f"{OLLAMA_ENDPOINT}/api/generate",
-                    json=payload
-                ) as response:
-                    if response.status_code == 200:
-                        logger.info("✅ Respuesta streaming iniciada correctamente desde Ollama")
-                        async for line in response.aiter_lines():
-                            if line.strip():
-                                try:
-                                    data = json.loads(line)
-                                    # Ollama devuelve chunks en formato: {"response": "texto", "done": false}
-                                    if "response" in data:
-                                        delta_content = data.get("response", "")
-                                        if delta_content:
-                                            yield delta_content
-                                    # Si done es true, terminar
-                                    if data.get("done", False):
-                                        break
-                                except json.JSONDecodeError:
-                                    # Ignorar líneas que no son JSON válido
-                                    continue
-                                except Exception as e:
-                                    logger.warning(f"⚠️ Error procesando chunk: {e}")
-                                    continue
-                    else:
-                        error_text = await response.aread()
-                        logger.error(f"❌ Error en Ollama: {response.status_code} - {error_text}")
-                        yield f"Error: No se pudo procesar la imagen ({response.status_code})"
+            # Llamar a Ollama con streaming con soporte para cancelación
+            timeout = httpx.Timeout(600.0, connect=10.0)
+            async with httpx.AsyncClient(timeout=timeout) as client:  # 10 minutos de timeout
+                # Verificar si fue cancelado antes de enviar
+                if abort_controller and abort_controller.signal.aborted:
+                    logger.info("🛑 Streaming cancelado antes de enviar a Ollama")
+                    return
+                
+                try:
+                    async with client.stream(
+                        "POST",
+                        f"{OLLAMA_ENDPOINT}/api/generate",
+                        json=payload
+                    ) as response:
+                        if response.status_code == 200:
+                            logger.info("✅ Respuesta streaming iniciada correctamente desde Ollama")
+                            async for line in response.aiter_lines():
+                                # Verificar si fue cancelado durante el streaming
+                                if abort_controller and abort_controller.signal.aborted:
+                                    logger.info("🛑 Streaming cancelado durante recepción de chunks")
+                                    return
+                                
+                                if line.strip():
+                                    try:
+                                        data = json.loads(line)
+                                        # Ollama devuelve chunks en formato: {"response": "texto", "done": false}
+                                        if "response" in data:
+                                            delta_content = data.get("response", "")
+                                            if delta_content:
+                                                yield delta_content
+                                        # Si done es true, terminar
+                                        if data.get("done", False):
+                                            break
+                                    except json.JSONDecodeError:
+                                        # Ignorar líneas que no son JSON válido
+                                        continue
+                                    except Exception as e:
+                                        logger.warning(f"⚠️ Error procesando chunk: {e}")
+                                        continue
+                        else:
+                            error_text = await response.aread()
+                            logger.error(f"❌ Error en Ollama: {response.status_code} - {error_text}")
+                            yield f"Error: No se pudo procesar la imagen ({response.status_code})"
+                except asyncio.CancelledError:
+                    logger.info("🛑 Streaming cancelado (CancelledError) durante streaming de Ollama")
+                    return
             
         except Exception as e:
             logger.error(f"❌ Error en análisis médico: {e}")

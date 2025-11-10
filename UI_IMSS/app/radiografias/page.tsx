@@ -595,7 +595,7 @@ function RadiografiasPageContent() {
             sidebarCollapsed ? 'opacity-0' : 'opacity-100'
           }`}>
             <Image
-              src="/IMSS.png"
+              src="/logo_imss.png"
               alt="IMSS"
               width={90}
               height={60}
@@ -763,7 +763,7 @@ function RadiografiasPageContent() {
                   <div className="flex flex-col h-full">
                     <div className="p-6 border-b border-gray-200 dark:border-gray-800">
                       <div className="flex flex-col items-center gap-3 mb-4">
-                        <Image src="/IMSS.png" alt="IMSS" width={90} height={60} className="h-12 w-auto" />
+                        <Image src="/logo_imss.png" alt="IMSS" width={90} height={60} className="h-12 w-auto" />
                         <Image src="/quetzalia.png" alt="quetzalIA.mx" width={200} height={60} className="h-12 w-auto" />
                       </div>
                       <Button onClick={() => {
@@ -891,7 +891,7 @@ function RadiografiasPageContent() {
               </Sheet>
             </div>
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Image src="/IMSS.png" alt="IMSS" width={400} height={100} className="h-14 md:h-20 lg:h-24 w-auto" />
+              <Image src="/logo_imss.png" alt="IMSS" width={400} height={100} className="h-14 md:h-20 lg:h-24 w-auto" />
             </div>
           </div>
           <div className="hidden md:flex items-center justify-between w-full">

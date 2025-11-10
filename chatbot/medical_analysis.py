@@ -7,6 +7,7 @@ import base64
 import logging
 import os
 import httpx
+import asyncio
 from typing import Dict, Any, Optional
 import json
 from PIL import Image
@@ -31,7 +32,7 @@ MODEL_NAME = "google/medgemma-27b-it"
 MAX_IMAGE_SIZE_MB = 2  # 2MB máximo en bytes originales
 MAX_IMAGE_DIMENSION = 512  # Máximo 512px en cualquier dimensión
 MAX_IMAGE_QUALITY = 85  # Calidad JPEG (0-100)
-MAX_IMAGE_TOKENS = 4500  # ~3500 tokens máximo para imagen en base64 (aumentado para permitir imágenes más grandes)
+MAX_IMAGE_TOKENS = 15000  # Tokens máximo para imagen en base64 (aumentado para permitir imágenes médicas más grandes)
 
 
 def compress_image(image_data: str, max_dimension: int = MAX_IMAGE_DIMENSION, quality: int = MAX_IMAGE_QUALITY) -> str:
@@ -134,7 +135,8 @@ y tratamientos médicos. Responde en español."""
     
     async def analyze_with_ollama(self, image_data: str, prompt: str, session_id: Optional[str] = None, 
                                   conversation_history: Optional[list] = None, 
-                                  entity_context: Optional[str] = None) -> Dict[str, Any]:
+                                  entity_context: Optional[str] = None,
+                                  abort_controller: Optional[Any] = None) -> Dict[str, Any]:
         """
         Analizar imagen usando Ollama (medgemma-4b) manteniendo toda la arquitectura Langchain
         
@@ -152,16 +154,28 @@ y tratamientos médicos. Responde en español."""
             is_valid, error_msg = validate_image_size(image_data)
             if not is_valid:
                 logger.warning(f"⚠️ {error_msg}. Comprimiendo imagen...")
-                # Comprimir imagen si es muy grande
-                image_data = compress_image(image_data)
+                # Comprimir imagen si es muy grande (primera compresión con calidad 85)
+                image_data = compress_image(image_data, quality=85)
                 # Validar nuevamente después de compresión
                 is_valid, error_msg = validate_image_size(image_data)
                 if not is_valid:
-                    return {
-                        "success": False,
-                        "error": f"Imagen demasiado grande incluso después de compresión: {error_msg}",
-                        "provider": "ollama"
-                    }
+                    # Si aún es muy grande, comprimir más agresivamente (calidad 70)
+                    logger.warning(f"⚠️ Imagen aún muy grande después de primera compresión. Comprimiendo más agresivamente...")
+                    image_data = compress_image(image_data, quality=70, max_dimension=512)
+                    # Validar nuevamente después de segunda compresión
+                    is_valid, error_msg = validate_image_size(image_data)
+                    if not is_valid:
+                        # Si aún es muy grande, comprimir aún más agresivamente (calidad 60, dimensión 400)
+                        logger.warning(f"⚠️ Imagen aún muy grande después de segunda compresión. Comprimiendo muy agresivamente...")
+                        image_data = compress_image(image_data, quality=60, max_dimension=400)
+                        # Validar nuevamente después de tercera compresión
+                        is_valid, error_msg = validate_image_size(image_data)
+                        if not is_valid:
+                            return {
+                                "success": False,
+                                "error": f"Imagen demasiado grande incluso después de compresión agresiva: {error_msg}",
+                                "provider": "ollama"
+                            }
             
             # Decodificar imagen para obtener metadata
             image_bytes = base64.b64decode(image_data)
@@ -211,13 +225,34 @@ Prompt del usuario: {prompt if prompt else 'Analiza esta radiografía médica en
                 "stream": False
             }
             
-            # Enviar petición a Ollama
-            async with httpx.AsyncClient(timeout=600.0) as client:  # 10 minutos de timeout para análisis de imágenes
+            # Enviar petición a Ollama con soporte para cancelación
+            timeout = httpx.Timeout(600.0, connect=10.0)
+            async with httpx.AsyncClient(timeout=timeout) as client:  # 10 minutos de timeout para análisis de imágenes
                 logger.info(f"🚀 Enviando imagen a {OLLAMA_ENDPOINT}/api/generate")
-                response = await client.post(
-                    f"{OLLAMA_ENDPOINT}/api/generate",
-                    json=payload
-                )
+                
+                # Verificar si fue cancelado antes de enviar
+                if abort_controller and abort_controller.signal.aborted:
+                    logger.info("🛑 Request cancelado antes de enviar a Ollama")
+                    return {
+                        "success": False,
+                        "error": "Request cancelado por el usuario",
+                        "provider": "ollama",
+                        "cancelled": True
+                    }
+                
+                try:
+                    response = await client.post(
+                        f"{OLLAMA_ENDPOINT}/api/generate",
+                        json=payload
+                    )
+                except asyncio.CancelledError:
+                    logger.info("🛑 Request cancelado durante envío a Ollama")
+                    return {
+                        "success": False,
+                        "error": "Request cancelado por el usuario",
+                        "provider": "ollama",
+                        "cancelled": True
+                    }
                 
                 if response.status_code == 200:
                     result = response.json()
@@ -284,9 +319,10 @@ Prompt del usuario: {prompt if prompt else 'Analiza esta radiografía médica en
     async def analyze_with_fallback(self, image_data: str, image_format: str, prompt: str, 
                                      session_id: Optional[str] = None,
                                      conversation_history: Optional[list] = None,
-                                     entity_context: Optional[str] = None) -> Dict[str, Any]:
+                                     entity_context: Optional[str] = None,
+                                     abort_controller: Optional[Any] = None) -> Dict[str, Any]:
         """Análisis de imagen con Ollama (medgemma-4b) manteniendo arquitectura Langchain"""
-        return await self.analyze_with_ollama(image_data, prompt, session_id, conversation_history, entity_context)
+        return await self.analyze_with_ollama(image_data, prompt, session_id, conversation_history, entity_context, abort_controller)
 
 
 # Instancia global (se inicializará con system_prompt cuando se necesite)
@@ -307,7 +343,8 @@ async def analyze_image_with_fallback(image_data: str, image_format: str, prompt
                                        session_id: Optional[str] = None,
                                        conversation_history: Optional[list] = None,
                                        entity_context: Optional[str] = None,
-                                       system_prompt: Optional[str] = None) -> Dict[str, Any]:
+                                       system_prompt: Optional[str] = None,
+                                       abort_controller: Optional[Any] = None) -> Dict[str, Any]:
     """
     Función helper para análisis de imagen con Ollama manteniendo arquitectura Langchain
     
@@ -321,4 +358,4 @@ async def analyze_image_with_fallback(image_data: str, image_format: str, prompt
         system_prompt: System prompt personalizado (opcional)
     """
     analyzer = get_medical_analyzer(system_prompt=system_prompt)
-    return await analyzer.analyze_with_fallback(image_data, image_format, prompt, session_id, conversation_history, entity_context)
+    return await analyzer.analyze_with_fallback(image_data, image_format, prompt, session_id, conversation_history, entity_context, abort_controller)

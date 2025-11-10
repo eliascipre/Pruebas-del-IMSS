@@ -79,7 +79,7 @@ function DicomOhifPageContent() {
               </svg>
             </Link>
             <div className="flex items-center gap-2">
-              <Image src="/IMSS.png" alt="IMSS" width={90} height={60} className="h-12 w-auto" />
+              <Image src="/logo_imss.png" alt="IMSS" width={90} height={60} className="h-12 w-auto" />
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Visor DICOM (OHIF)</h1>
             </div>
           </div>
