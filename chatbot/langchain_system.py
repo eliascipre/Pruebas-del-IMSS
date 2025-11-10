@@ -775,41 +775,20 @@ y tratamientos médicos. Responde en español."""
         
         message_lower = user_message.lower().strip()
         
-        # Detectar saludos y mensajes no médicos
+        # Detectar solo saludos simples (dejar que el LLM maneje el resto)
         greetings = ["hola", "buenos días", "buenas tardes", "buenas noches", "buen día", 
                      "hi", "hello", "saludos", "qué tal", "cómo estás", "cómo está"]
         
-        # Detectar si es solo un saludo
+        # Detectar si es solo un saludo simple (sin contenido adicional)
         is_greeting = any(greeting in message_lower for greeting in greetings) and len(message_lower.split()) <= 5
         
-        # Detectar palabras clave médicas
-        medical_keywords = [
-            "dolor", "síntoma", "malestar", "enfermedad", "enfermo", "enferma",
-            "fiebre", "tos", "náusea", "vómito", "mareo", "mareos",
-            "medicamento", "medicina", "pastilla", "tratamiento",
-            "diagnóstico", "diagnosticar", "consulta", "médico", "doctor",
-            "clínica", "hospital", "imss", "urgencia", "emergencia",
-            "sangre", "herida", "fractura", "golpe", "caída",
-            "presión", "diabetes", "hipertensión", "asma", "alergia",
-            "cáncer", "tumor", "quiste", "infección", "bacteria", "virus"
-        ]
-        
-        # Verificar si el mensaje tiene contenido médico
-        has_medical_content = any(keyword in message_lower for keyword in medical_keywords)
-        
-        # Si es solo un saludo, no hacer preguntas médicas
-        if is_greeting and not has_medical_content:
+        # Si es solo un saludo simple, responder amigablemente
+        if is_greeting:
             return True, [], "greeting"  # Indicar que es un saludo
         
-        # Si no tiene contenido médico y no es un saludo, indicar que no es una consulta médica
-        if not has_medical_content and len(message_lower.split()) > 5:
-            # Verificar si es una pregunta sobre el sistema o información general
-            system_keywords = ["quién eres", "qué eres", "cómo funcionas", "qué puedes hacer", 
-                              "ayuda", "help", "información", "sobre ti"]
-            is_system_question = any(keyword in message_lower for keyword in system_keywords)
-            
-            if not is_system_question:
-                return True, [], "not_medical"  # Indicar que no es una consulta médica
+        # Para todo lo demás, dejar que el LLM decida si es médico o no
+        # El prompt del sistema ya indica que es un asistente médico del IMSS
+        # El LLM naturalmente responderá de manera médica cuando sea apropiado
         
         # Palabras clave que indican información suficiente
         sufficient_keywords = [
@@ -839,29 +818,34 @@ y tratamientos médicos. Responde en español."""
         found_keywords = [kw for kw in sufficient_keywords if kw in full_text]
         
         # Si hay menos de 3 palabras clave y el mensaje es corto, probablemente falta información
-        # Pero solo si tiene contenido médico
-        if has_medical_content and (len(found_keywords) < 3 or len(user_message.strip()) < 20):
+        # Dejar que el LLM decida si necesita hacer preguntas o si tiene suficiente información
+        # Solo generar preguntas si el mensaje es muy corto y parece ser una consulta médica
+        if len(found_keywords) < 3 and len(user_message.strip()) < 30:
             # Generar preguntas relevantes basadas en los síntomas mencionados
             questions = self._generate_relevant_questions(user_message)
-            return False, questions, None
+            # Solo hacer preguntas si detectamos síntomas o consultas médicas
+            if questions:
+                return False, questions, None
         
-        # Si tiene contenido médico y suficiente información, continuar
+        # Si tiene suficiente información o el LLM puede manejarlo, continuar
         return True, [], None
     
     def _generate_relevant_questions(self, user_message: str) -> List[str]:
         """
         Generar preguntas relevantes basadas en los síntomas mencionados.
+        Esta función es una ayuda para generar preguntas, pero el LLM también puede hacerlo.
         """
         message_lower = user_message.lower()
         questions = []
         
         # Detectar síntomas comunes y generar preguntas específicas
-        if "dolor" in message_lower:
+        # Usar variaciones más flexibles (incluyendo "duele", "dolores", etc.)
+        if "dolor" in message_lower or "duele" in message_lower or "dolores" in message_lower:
             if "cuándo" not in message_lower and "hace" not in message_lower and "desde" not in message_lower:
                 questions.append("¿Cuándo comenzó el dolor?")
             if "intensidad" not in message_lower and "intenso" not in message_lower and "leve" not in message_lower and "moderado" not in message_lower and "severo" not in message_lower:
                 questions.append("¿Qué tan intenso es el dolor? (escala del 1 al 10)")
-            if "localiza" not in message_lower and "dónde" not in message_lower and "frente" not in message_lower and "sien" not in message_lower:
+            if "localiza" not in message_lower and "dónde" not in message_lower and "frente" not in message_lower and "sien" not in message_lower and "cabeza" not in message_lower:
                 questions.append("¿Dónde se localiza el dolor?")
         
         if "fiebre" in message_lower or "temperatura" in message_lower:
@@ -892,6 +876,7 @@ y tratamientos médicos. Responde en español."""
             questions.append("¿Cuál es tu edad?")
         
         # Si no hay síntomas específicos detectados, hacer preguntas generales
+        # Esto ayuda cuando el mensaje es muy corto o ambiguo
         if not questions:
             questions.append("¿Cuándo comenzó el síntoma?")
             questions.append("¿Qué tan intenso es? (escala del 1 al 10)")
@@ -926,13 +911,9 @@ y tratamientos médicos. Responde en español."""
                     logger.info(f"📋 Saludo detectado. Respondiendo amigablemente")
                     return response
                 
-                # Manejar consultas no médicas
-                if special_message == "not_medical":
-                    response = "Lo siento, solo puedo ayudarte con consultas médicas relacionadas con el IMSS. Si tienes alguna pregunta sobre síntomas, medicamentos, tratamientos o información médica, estaré encantado de ayudarte. ¿Hay algo médico en lo que pueda asistirte?"
-                    history.add_user_message(user_message)
-                    history.add_ai_message(response)
-                    logger.info(f"📋 Consulta no médica detectada. Redirigiendo a tema médico")
-                    return response
+                # Eliminada la detección hardcodeada de "not_medical"
+                # El LLM ahora maneja todo, incluyendo si el mensaje es médico o no
+                # El prompt del sistema ya indica que es un asistente médico del IMSS
                 
                 # Si no hay suficiente información médica, hacer preguntas
                 if not has_sufficient_info and missing_questions and len(missing_questions) > 0:
@@ -1399,17 +1380,41 @@ Prompt del usuario: {user_message if user_message else 'Analiza esta radiografí
             logger.info(f"🖼️ Enviando imagen a Ollama con streaming...")
             logger.info(f"📏 Tamaño de imagen base64: {len(image_data)} caracteres (~{len(image_data) // 4} tokens estimados)")
             
-            # Preparar payload para Ollama con streaming
+            # Preparar payload para Ollama con streaming y optimizaciones
+            # Importar configuración de optimización
+            from medical_analysis import (
+                OLLAMA_NUM_CTX, OLLAMA_NUM_GPU, OLLAMA_NUM_THREAD, 
+                OLLAMA_GPU_LAYERS, OLLAMA_TEMPERATURE, OLLAMA_TOP_P, 
+                OLLAMA_TOP_K, OLLAMA_REPEAT_PENALTY
+            )
+            
+            # Preparar payload para Ollama con streaming y optimizaciones
+            # Parámetros basados en Modelfile.optimized
             payload = {
                 "model": OLLAMA_MODEL,
                 "prompt": analysis_prompt,
                 "images": [image_data],  # Array de strings base64
-                "stream": True
+                "stream": True,
+                "options": {
+                    "num_ctx": OLLAMA_NUM_CTX,  # Context window: 32K tokens (25% del máximo 131K)
+                    "num_gpu": OLLAMA_NUM_GPU,  # Usar GPU para procesamiento
+                    "num_thread": OLLAMA_NUM_THREAD,  # Threads CPU para operaciones auxiliares
+                    "gpu_layers": OLLAMA_GPU_LAYERS,  # Capas en GPU (ajustar según modelo)
+                    "numa": False,  # Deshabilitar NUMA para mejor rendimiento
+                    "use_mmap": True,  # Memory mapping para cargar modelo más rápido
+                    "use_mlock": True,  # Lock memory para evitar swap
+                    "temperature": OLLAMA_TEMPERATURE,  # Temperatura baja para análisis médico consistente
+                    "top_p": OLLAMA_TOP_P,  # Nucleus sampling
+                    "top_k": OLLAMA_TOP_K,  # Top-K sampling
+                    "repeat_penalty": OLLAMA_REPEAT_PENALTY,  # Penalización de repetición
+                    "num_predict": -1,  # Sin límite de tokens de salida (usar contexto completo)
+                }
             }
             
             # Llamar a Ollama con streaming con soporte para cancelación
             timeout = httpx.Timeout(600.0, connect=10.0)
             async with httpx.AsyncClient(timeout=timeout) as client:  # 10 minutos de timeout
+                logger.info(f"⚙️  Usando contexto optimizado: {OLLAMA_NUM_CTX} tokens, GPU: {OLLAMA_NUM_GPU}, Temperature: {OLLAMA_TEMPERATURE}")
                 # Verificar si fue cancelado antes de enviar
                 if abort_controller and abort_controller.signal.aborted:
                     logger.info("🛑 Streaming cancelado antes de enviar a Ollama")

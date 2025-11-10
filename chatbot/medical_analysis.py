@@ -19,6 +19,17 @@ logger = logging.getLogger(__name__)
 OLLAMA_ENDPOINT = os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_IMAGE_MODEL", "amsaravi/medgemma-4b-it:q8")
 
+# Configuración de optimización para Ollama (basado en Modelfile.optimized)
+# El modelo soporta hasta 131,072 tokens - usamos 32K para balance rendimiento/memoria
+OLLAMA_NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "32768"))  # Context window: 32K tokens
+OLLAMA_NUM_GPU = int(os.getenv("OLLAMA_NUM_GPU", "1"))  # Usar 1 GPU por request
+OLLAMA_NUM_THREAD = int(os.getenv("OLLAMA_NUM_THREAD", "8"))  # Threads CPU
+OLLAMA_GPU_LAYERS = int(os.getenv("OLLAMA_GPU_LAYERS", "35"))  # Capas en GPU (ajustar según modelo)
+OLLAMA_TEMPERATURE = float(os.getenv("OLLAMA_TEMPERATURE", "0.2"))  # Temperatura baja para análisis médico consistente
+OLLAMA_TOP_P = float(os.getenv("OLLAMA_TOP_P", "0.9"))  # Nucleus sampling
+OLLAMA_TOP_K = int(os.getenv("OLLAMA_TOP_K", "40"))  # Top-K sampling
+OLLAMA_REPEAT_PENALTY = float(os.getenv("OLLAMA_REPEAT_PENALTY", "1.1"))  # Penalización de repetición
+
 # Configuración para vLLM (texto) - mantener para compatibilidad
 VLLM_ENDPOINT = os.getenv("VLLM_ENDPOINT", os.getenv("LM_STUDIO_ENDPOINT", "http://localhost:8000/v1/"))
 if not VLLM_ENDPOINT.endswith("/v1/"):
@@ -109,6 +120,7 @@ class MedicalImageAnalysis:
         self.system_prompt = system_prompt
         logger.info(f"✅ Configurado para usar Ollama en: {OLLAMA_ENDPOINT}")
         logger.info(f"✅ Modelo de imágenes: {OLLAMA_MODEL}")
+        logger.info(f"⚙️  Configuración optimizada: num_ctx={OLLAMA_NUM_CTX}, num_gpu={OLLAMA_NUM_GPU}, temperature={OLLAMA_TEMPERATURE}")
     
     def _load_medical_prompt(self) -> str:
         """Cargar prompt médico desde archivo (igual que langchain_system.py)"""
@@ -216,19 +228,35 @@ Prompt del usuario: {prompt if prompt else 'Analiza esta radiografía médica en
             logger.info(f"📏 Enviando imagen a Ollama (tamaño: {image_size} bytes)")
             logger.info(f"📝 Prompt del usuario: {prompt[:100] if prompt else 'Sin prompt'}...")
             
-            # Preparar payload para Ollama (formato del script de ejemplo)
-            # Formato: {"model": "...", "prompt": "...", "images": [base64_image], "stream": False}
+            # Preparar payload para Ollama con optimizaciones de GPU y contexto
+            # El modelo soporta hasta 131,072 tokens - usamos 32K para balance rendimiento/memoria
+            # Parámetros basados en Modelfile.optimized
             payload = {
                 "model": OLLAMA_MODEL,
                 "prompt": analysis_prompt,
                 "images": [image_data],  # Array de strings base64
-                "stream": False
+                "stream": False,
+                "options": {
+                    "num_ctx": OLLAMA_NUM_CTX,  # Context window: 32K tokens (25% del máximo 131K)
+                    "num_gpu": OLLAMA_NUM_GPU,  # Usar GPU para procesamiento
+                    "num_thread": OLLAMA_NUM_THREAD,  # Threads CPU para operaciones auxiliares
+                    "gpu_layers": OLLAMA_GPU_LAYERS,  # Capas en GPU (ajustar según modelo)
+                    "numa": False,  # Deshabilitar NUMA para mejor rendimiento
+                    "use_mmap": True,  # Memory mapping para cargar modelo más rápido
+                    "use_mlock": True,  # Lock memory para evitar swap
+                    "temperature": OLLAMA_TEMPERATURE,  # Temperatura baja para análisis médico consistente
+                    "top_p": OLLAMA_TOP_P,  # Nucleus sampling
+                    "top_k": OLLAMA_TOP_K,  # Top-K sampling
+                    "repeat_penalty": OLLAMA_REPEAT_PENALTY,  # Penalización de repetición
+                    "num_predict": -1,  # Sin límite de tokens de salida (usar contexto completo)
+                }
             }
             
             # Enviar petición a Ollama con soporte para cancelación
             timeout = httpx.Timeout(600.0, connect=10.0)
             async with httpx.AsyncClient(timeout=timeout) as client:  # 10 minutos de timeout para análisis de imágenes
                 logger.info(f"🚀 Enviando imagen a {OLLAMA_ENDPOINT}/api/generate")
+                logger.info(f"⚙️  Usando contexto optimizado: {OLLAMA_NUM_CTX} tokens, GPU: {OLLAMA_NUM_GPU}, Temperature: {OLLAMA_TEMPERATURE}")
                 
                 # Verificar si fue cancelado antes de enviar
                 if abort_controller and abort_controller.signal.aborted:
