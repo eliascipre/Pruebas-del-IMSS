@@ -517,3 +517,4 @@ lsof -ti:5001 | xargs kill -9
 **Última actualización:** 2025-11-10
 **Versión del script:** 1.0
 
+

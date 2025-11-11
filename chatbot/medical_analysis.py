@@ -213,15 +213,21 @@ y tratamientos médicos. Responde en español."""
                 full_system_prompt = f"{full_system_prompt}\n{history_text}"
             
             # Construir prompt final para análisis de imagen
+            # IMPORTANTE: Todas las respuestas deben estar dirigidas AL DOCTOR, NO al paciente
             analysis_prompt = f"""{full_system_prompt}
 
 IMPORTANTE: El usuario ha compartido una radiografía/imagen médica.
-Analiza la imagen proporcionada y proporciona:
+Analiza la imagen proporcionada y proporciona información dirigida AL DOCTOR:
 1. Descripción de estructuras anatómicas visibles
 2. Hallazgos normales vs anormales
 3. Posibles patologías o alteraciones
-4. Recomendaciones profesionales
-5. Siempre remitir a consulta médica del IMSS para confirmación
+4. Recomendaciones profesionales para el médico
+
+REGLA CRÍTICA: 
+- TODAS las respuestas deben estar dirigidas AL DOCTOR, NO al paciente
+- NUNCA uses lenguaje como "El paciente debe consultar..." o "Es importante que el paciente se dirija..."
+- SIEMPRE usa lenguaje médico profesional dirigido al doctor: "Se recomienda evaluación por radiólogo...", "Considerar interpretación especializada..."
+- NUNCA digas "El paciente debe..." - eso es para el paciente, no para el doctor
 
 Prompt del usuario: {prompt if prompt else 'Analiza esta radiografía médica en detalle'}"""
             
