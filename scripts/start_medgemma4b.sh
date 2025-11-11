@@ -64,3 +64,5 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 ollama run amsaravi/medgemma-4b-it:q8
 
 
 
+
+

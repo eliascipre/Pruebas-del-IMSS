@@ -470,8 +470,11 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
             except Exception as _e:
                 logger.warning(f"⚠️ No se pudo persistir mensaje de usuario (stream): {_e}")
 
+            # Obtener nombre del usuario para personalización
+            user_name = user.get('name')
+            
             return StreamingResponse(
-                process_text_stream(req.message, session_id),
+                process_text_stream(req.message, session_id, user_name=user_name),
                 media_type="text/event-stream",
                 headers={
                     'Cache-Control': 'no-cache',
@@ -547,7 +550,9 @@ async def chat_endpoint(req: ChatRequest, user: Dict[str, Any] = Depends(require
                 
                 try:
                     start_ts = int(time.time() * 1000)
-                    response = await medical_chain.process_chat(req.message, session_id, request_id=request_id)
+                    # Obtener nombre del usuario para personalización
+                    user_name = user.get('name')
+                    response = await medical_chain.process_chat(req.message, session_id, request_id=request_id, user_name=user_name)
                     
                     # Persistir respuesta del asistente
                     try:
@@ -665,7 +670,7 @@ async def cancel_chat_endpoint(req: CancelRequest, user: Dict[str, Any] = Depend
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def process_text_stream(message: str, session_id: str):
+async def process_text_stream(message: str, session_id: str, user_name: Optional[str] = None):
     """
     Procesar texto con streaming usando Server-Sent Events (SSE)
     
@@ -680,6 +685,11 @@ async def process_text_stream(message: str, session_id: str):
     3. Parsear el JSON después de "data: "
     4. Acumular content hasta recibir done: true
     5. Manejar errores si viene el campo "error"
+    
+    Args:
+        message: Mensaje del usuario
+        session_id: ID de sesión
+        user_name: Nombre del usuario para personalización
     """
     try:
         full_response = ""
@@ -690,7 +700,7 @@ async def process_text_stream(message: str, session_id: str):
         
         # Stream chunks desde LangChain
         try:
-            async for chunk in medical_chain.stream_chat(message, session_id):
+            async for chunk in medical_chain.stream_chat(message, session_id, user_name=user_name):
                 if chunk:
                     chunk_count += 1
                     # Asegurar que el chunk sea string y esté en UTF-8

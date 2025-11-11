@@ -885,8 +885,16 @@ y tratamientos médicos. Responde en español."""
         
         return questions[:6]  # Máximo 6 preguntas
     
-    async def process_chat(self, user_message: str, session_id: str = "", use_entities: bool = True, request_id: Optional[str] = None) -> str:
-        """Procesar chat con lógica de preguntas antes de diagnosticar"""
+    async def process_chat(self, user_message: str, session_id: str = "", use_entities: bool = True, request_id: Optional[str] = None, user_name: Optional[str] = None) -> str:
+        """Procesar chat con lógica de preguntas antes de diagnosticar
+        
+        Args:
+            user_message: Mensaje del usuario
+            session_id: ID de sesión
+            use_entities: Si usar entidades extraídas
+            request_id: ID de request para cancelación
+            user_name: Nombre del usuario para personalizar el saludo
+        """
         try:
             # Obtener historial de conversación desde SQLite
             history = self._get_chat_history(session_id)
@@ -905,27 +913,104 @@ y tratamientos médicos. Responde en español."""
                 
                 # Manejar saludos
                 if special_message == "greeting":
-                    response = "¡Hola! Soy Quetzalia Salud, tu asistente médico del IMSS. Estoy aquí para ayudarte con consultas médicas. ¿En qué puedo ayudarte hoy?"
+                    # Formatear saludo con nombre del usuario si está disponible
+                    if user_name and user_name.strip():
+                        # Extraer solo el primer nombre si hay múltiples palabras
+                        first_name = user_name.strip().split()[0] if user_name.strip() else ""
+                        greeting_name = f"Dr./Dra. {first_name}"
+                    else:
+                        greeting_name = "Dr./Dra."
+                    
+                    # Formato estructurado de presentación profesional
+                    response = f"""Hola {greeting_name},
+
+Soy un modelo de inteligencia artificial diseñado para tareas médicas complejas. 
+
+Como modelo de IA, mi objetivo es asistirle proporcionando información relevante y patrones reconocidos, pero el diagnóstico definitivo y el plan de tratamiento recaen siempre en su experiencia y criterio clínico.
+
+Estoy hecho para interpretar imágenes médicas, generar informes y responder preguntas clínicas.
+
+Para optimizar mi ayuda en este caso, le sugiero considerar y/o proporcionarme la siguiente información:
+
+1.⁠ ⁠Síntomas principales y antecedentes:
+
+o	Características del síntoma principal: ¿Desde cuándo, localización, tipo (punzante, opresivo, irradiado), intensidad, factores que lo mejoran o empeoran?
+
+o	Síntomas asociados: Fiebre, náuseas, vómitos, alteraciones sensitivas, motoras, visuales, etc.
+
+o	Antecedentes médicos relevantes: Comorbilidades, medicación actual, alergias, historial familiar.
+
+2.⁠ ⁠Hallazgos de estudios complementarios:
+
+o	Si existen, por favor, detalle los hallazgos clave de radiografías, tomografías, resonancias, analíticas u otros estudios. Puede describir los resultados o, si es posible, cargar los informes.
+
+Con esta información, puedo ayudarle a explorar posibles diagnósticos diferenciales, sugerir estudios adicionales o recordar criterios de alarma relevantes.
+
+Por favor, proceda con la información. Estoy aquí para colaborar con su práctica clínica."""
                     history.add_user_message(user_message)
                     history.add_ai_message(response)
-                    logger.info(f"📋 Saludo detectado. Respondiendo amigablemente")
+                    logger.info(f"📋 Saludo detectado. Respondiendo con formato estructurado profesional")
                     return response
                 
                 # Eliminada la detección hardcodeada de "not_medical"
                 # El LLM ahora maneja todo, incluyendo si el mensaje es médico o no
                 # El prompt del sistema ya indica que es un asistente médico del IMSS
                 
-                # Si no hay suficiente información médica, hacer preguntas
+                # Si no hay suficiente información médica, hacer preguntas con formato estructurado
                 if not has_sufficient_info and missing_questions and len(missing_questions) > 0:
-                    # Construir mensaje para hacer preguntas
-                    questions_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(missing_questions)])
-                    response = f"""Entiendo tu consulta. Para poder ayudarte mejor y proporcionar información útil al médico, necesito hacerte algunas preguntas:\n\n{questions_text}\n\nPor favor, comparte esta información para que pueda preparar una descripción completa para el médico."""
+                    # Construir mensaje estructurado para solicitar información
+                    # Organizar preguntas en categorías según el formato deseado
+                    sintomas_questions = []
+                    estudios_questions = []
+                    otros_questions = []
+                    
+                    for q in missing_questions:
+                        q_lower = q.lower()
+                        if any(keyword in q_lower for keyword in ["síntoma", "dolor", "fiebre", "tos", "náusea", "vómito", "localización", "intensidad", "cuándo", "desde"]):
+                            sintomas_questions.append(q)
+                        elif any(keyword in q_lower for keyword in ["radiografía", "tomografía", "resonancia", "analítica", "estudio", "laboratorio"]):
+                            estudios_questions.append(q)
+                        else:
+                            otros_questions.append(q)
+                    
+                    # Construir respuesta estructurada
+                    response_parts = [
+                        "Para optimizar mi ayuda en este caso, le sugiero considerar y/o proporcionarme la siguiente información:\n"
+                    ]
+                    
+                    if sintomas_questions or otros_questions:
+                        response_parts.append("1.⁠ ⁠Síntomas principales y antecedentes:\n")
+                        response_parts.append("\no\tCaracterísticas del síntoma principal: ¿Desde cuándo, localización, tipo (punzante, opresivo, irradiado), intensidad, factores que lo mejoran o empeoran?")
+                        response_parts.append("\no\tSíntomas asociados: Fiebre, náuseas, vómitos, alteraciones sensitivas, motoras, visuales, etc.")
+                        response_parts.append("\no\tAntecedentes médicos relevantes: Comorbilidades, medicación actual, alergias, historial familiar.")
+                        
+                        # Agregar preguntas específicas si existen
+                        if sintomas_questions:
+                            response_parts.append("\n\nPreguntas específicas adicionales:")
+                            for i, q in enumerate(sintomas_questions[:3], 1):  # Máximo 3 preguntas
+                                response_parts.append(f"\n• {q}")
+                    
+                    if estudios_questions:
+                        response_parts.append("\n\n2.⁠ ⁠Hallazgos de estudios complementarios:\n")
+                        response_parts.append("\no\tSi existen, por favor, detalle los hallazgos clave de radiografías, tomografías, resonancias, analíticas u otros estudios. Puede describir los resultados o, si es posible, cargar los informes.")
+                        for q in estudios_questions[:2]:  # Máximo 2 preguntas
+                            response_parts.append(f"\n• {q}")
+                    
+                    if otros_questions and not sintomas_questions:
+                        response_parts.append("\n\nInformación adicional requerida:")
+                        for q in otros_questions[:3]:  # Máximo 3 preguntas
+                            response_parts.append(f"\n• {q}")
+                    
+                    response_parts.append("\n\nCon esta información, puedo ayudarle a explorar posibles diagnósticos diferenciales, sugerir estudios adicionales o recordar criterios de alarma relevantes.")
+                    response_parts.append("\n\nPor favor, proceda con la información. Estoy aquí para colaborar con su práctica clínica.")
+                    
+                    response = "".join(response_parts)
                     
                     # Guardar en historial
                     history.add_user_message(user_message)
                     history.add_ai_message(response)
                     
-                    logger.info(f"📋 Información insuficiente detectada. Haciendo preguntas al usuario")
+                    logger.info(f"📋 Información insuficiente detectada. Solicitando información con formato estructurado")
                     return response
             except Exception as e:
                 logger.error(f"❌ Error en detección de información suficiente: {e}", exc_info=True)
@@ -1219,8 +1304,14 @@ y tratamientos médicos. Responde en español."""
             logger.warning(f"⚠️ No se pudo estimar usage: {e}")
         return {}
     
-    async def stream_chat(self, user_message: str, session_id: str = "") -> AsyncGenerator[str, None]:
-        """Procesar chat con streaming usando LCEL completo con historial, Few-shot, Runnable"""
+    async def stream_chat(self, user_message: str, session_id: str = "", user_name: Optional[str] = None) -> AsyncGenerator[str, None]:
+        """Procesar chat con streaming usando LCEL completo con historial, Few-shot, Runnable
+        
+        Args:
+            user_message: Mensaje del usuario
+            session_id: ID de sesión
+            user_name: Nombre del usuario para personalización (opcional)
+        """
         try:
             # Obtener historial de conversación desde SQLite
             history = self._get_chat_history(session_id)
@@ -1234,7 +1325,12 @@ y tratamientos médicos. Responde en español."""
             
             # System message - Simplificar para evitar errores 500
             # Usar un prompt simple y básico similar al curl que funciona
-            system_content = "Eres un asistente médico del IMSS. Responde en español de manera clara y profesional."
+            # Incluir nombre del usuario si está disponible para personalización
+            if user_name and user_name.strip():
+                first_name = user_name.strip().split()[0] if user_name.strip() else ""
+                system_content = f"Eres un asistente médico del IMSS. Responde en español de manera clara y profesional. El usuario es Dr./Dra. {first_name}."
+            else:
+                system_content = "Eres un asistente médico del IMSS. Responde en español de manera clara y profesional."
             messages_list.append(SystemMessage(content=system_content))
             
             # Historial de conversación (solo últimos 2 mensajes para evitar sobrecarga)

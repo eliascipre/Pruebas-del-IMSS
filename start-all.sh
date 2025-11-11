@@ -297,6 +297,10 @@ main() {
     
     # Iniciar Gateway Next.js con variables de entorno necesarias
     print_status "Iniciando Gateway Next.js..."
+    # Iniciar gateway (el middleware bloquea las peticiones HMR WebSocket)
+    # Esto evita errores "Unauthorized" cuando se usa Cloudflare Tunnel
+    # El middleware en middleware.ts responde con 404 a las peticiones HMR
+    # en lugar de intentar establecer WebSocket, evitando errores en Cloudflare Tunnel
     run_bg "gateway" "cd UI_IMSS && HOSTNAME=0.0.0.0 SERVICIO_CHATBOT_URL=http://$LOCAL_IP:5001 SERVICIO_EDUCACION_URL=http://$LOCAL_IP:5002 SERVICIO_SIMULACION_URL=http://$LOCAL_IP:5003 SERVICIO_RADIOGRAFIAS_URL=http://$LOCAL_IP:5004 npm run dev"
     
     # Esperar que todos los servicios estén listos
