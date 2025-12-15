@@ -1,0 +1,134 @@
+graph TD
+    subgraph "Capa de Aplicación (Tu Backend)"
+        F[Flask API Client]
+    end
+
+    subgraph "Orquestación (Kubernetes)"
+        K["K8s Service (Load Balancer)"]
+    end
+
+    F --> K
+
+    subgraph "Clúster de Inferencia (20 Nodos / 80 GPUs)"
+        direction TB
+        
+        subgraph "Nodo 1 (4x A10)"
+            direction LR
+            T1["Triton Réplica 1 (Pod 1)"]
+            
+            subgraph SGP1 ["Modelo (Paralelismo de Tensor TP=4)"]
+                G1[GPU 0] --- M1[Shard 1]
+                G2[GPU 1] --- M2[Shard 2]
+                G3[GPU 2] --- M3[Shard 3]
+                G4[GPU 3] --- M4[Shard 4]
+            end
+            
+            style SGP1 fill:#f9f9f9,stroke:#333
+            style G1 fill:#78B55B,color:#fff
+            style G2 fill:#78B55B,color:#fff
+            style G3 fill:#78B55B,color:#fff
+            style G4 fill:#78B55B,color:#fff
+            
+            T1 -.-> G1
+            T1 -.-> G2
+            T1 -.-> G3
+            T1 -.-> G4
+        end
+
+        subgraph "Nodo 2 (4x A10)"
+            T2["Triton Réplica 2 (Pod 2)"]
+        end
+        
+        subgraph "Nodo 3 (4x A10)"
+            T3["Triton Réplica 3 (Pod 3)"]
+        end
+        
+        subgraph "Nodo 4 (4x A10)"
+            T4["Triton Réplica 4 (Pod 4)"]
+        end
+        
+        subgraph "Nodo 5 (4x A10)"
+            T5["Triton Réplica 5 (Pod 5)"]
+        end
+        
+        subgraph "Nodo 6 (4x A10)"
+            T6["Triton Réplica 6 (Pod 6)"]
+        end
+
+        subgraph "Nodo 7 (4x A10)"
+            T7["Triton Réplica 7 (Pod 7)"]
+        end
+
+        subgraph "Nodo 8 (4x A10)"
+            T8["Triton Réplica 8 (Pod 8)"]
+        end
+
+        subgraph "Nodo 9 (4x A10)"
+            T9["Triton Réplica 9 (Pod 9)"]
+        end
+
+        subgraph "Nodo 10 (4x A10)"
+            T10["Triton Réplica 10 (Pod 10)"]
+        end
+
+        subgraph "Nodo 11 (4x A10)"
+            T11["Triton Réplica 11 (Pod 11)"]
+        end
+
+        subgraph "Nodo 12 (4x A10)"
+            T12["Triton Réplica 12 (Pod 12)"]
+        end
+
+        subgraph "Nodo 13 (4x A10)"
+            T13["Triton Réplica 13 (Pod 13)"]
+        end
+
+        subgraph "Nodo 14 (4x A10)"
+            T14["Triton Réplica 14 (Pod 14)"]
+        end
+
+        subgraph "Nodo 15 (4x A10)"
+            T15["Triton Réplica 15 (Pod 15)"]
+        end
+
+        subgraph "Nodo 16 (4x A10)"
+            T16["Triton Réplica 16 (Pod 16)"]
+        end
+
+        subgraph "Nodo 17 (4x A10)"
+            T17["Triton Réplica 17 (Pod 17)"]
+        end
+
+        subgraph "Nodo 18 (4x A10)"
+            T18["Triton Réplica 18 (Pod 18)"]
+        end
+
+        subgraph "Nodo 19 (4x A10)"
+            T19["Triton Réplica 19 (Pod 19)"]
+        end
+
+        subgraph "Nodo 20 (4x A10)"
+            T20["Triton Réplica 20 (Pod 20)"]
+        end
+
+        K --> T1
+        K --> T2
+        K --> T3
+        K --> T4
+        K --> T5
+        K --> T6
+        K --> T7
+        K --> T8
+        K --> T9
+        K --> T10
+        K --> T11
+        K --> T12
+        K --> T13
+        K --> T14
+        K --> T15
+        K --> T16
+        K --> T17
+        K --> T18
+        K --> T19
+        K --> T20
+    end

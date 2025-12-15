@@ -1,0 +1,46 @@
+{
+    "patients": [
+        {
+            "id": 1,
+            "name": "Alejandro",
+            "gender": "Male",
+            "age": 35,
+            "existing_condition": "Depression",
+            "img": "/assets/jordan.avif",
+            "video": "/assets/jordan.mp4",
+            "headshot": "/assets/jordan_300.avif",
+            "fhirFile": "/assets/jason_fhir.json",
+            "voice": "Algenib"
+        },
+        {
+            "id": 2,
+            "name": "Lupita",
+            "gender": "Female",
+            "age": 63,
+            "existing_condition": "Diabetes",
+            "img": "/assets/alex.avif",
+            "video": "/assets/alex.mp4",
+            "headshot": "/assets/alex_300.avif",
+            "fhirFile": "/assets/alex_fhir.json",
+            "voice": "Gacrux"
+        },
+        {
+            "id": 3,
+            "name": "Jessica",
+            "gender": "Female",
+            "age": 24,
+            "existing_condition": "Asthma",
+            "img": "/assets/sacha.avif",
+            "video": "/assets/sacha.mp4",
+            "headshot": "/assets/sacha_150.avif",
+            "fhirFile": "/assets/sacha_fhir.json",
+            "voice": "Callirrhoe"
+        }
+    ],
+    "conditions": [
+        { "name": "Gripe", "description": "Una enfermedad respiratoria común y contagiosa causada por un virus que puede provocar fiebre, dolores corporales y fatiga." },
+        { "name": "Malaria", "description": "Una enfermedad grave transmitida por mosquitos que causa fiebres y escalofríos recurrentes debido a un parásito que infecta los glóbulos rojos." },
+        { "name": "Migraña", "description": "Un tipo de dolor de cabeza severo a menudo acompañado de dolor pulsante, sensibilidad a la luz y el sonido, y a veces náuseas." },
+        { "name": "Síndrome de Serotonina", "description": "Una reacción potencialmente peligrosa causada por demasiada serotonina en el cerebro, a menudo debido a ciertos medicamentos, que lleva a síntomas como agitación, frecuencia cardíaca rápida y confusión." }
+    ]
+}

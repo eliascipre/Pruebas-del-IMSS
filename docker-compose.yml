@@ -1,0 +1,169 @@
+version: '3.8'
+
+services:
+  # Gateway Principal (Next.js)
+  gateway:
+    build: 
+      context: ./UI_IMSS
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - MEDGEMMA_ENDPOINT=${MEDGEMMA_ENDPOINT}
+      - LM_STUDIO_URL=${LM_STUDIO_URL}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GCP_MEDGEMMA_ENDPOINT=${GCP_MEDGEMMA_ENDPOINT}
+    depends_on:
+      - servicio-chatbot
+      - servicio-educacion
+      - servicio-simulacion
+      - servicio-radiografias
+    networks:
+      - imss-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Servicio Chatbot Principal
+  servicio-chatbot:
+    build:
+      context: ./servicios/chatbot
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_PORT=5001
+      - MEDGEMMA_ENDPOINT=${MEDGEMMA_ENDPOINT}
+      - LM_STUDIO_URL=${LM_STUDIO_URL}
+    volumes:
+      - ./data/chatbot_cache:/app/cache
+    networks:
+      - imss-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Servicio Educación Radiológica
+  servicio-educacion:
+    build:
+      context: ./Educacion_radiografia
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_PORT=5002
+      - LM_STUDIO_URL=${LM_STUDIO_URL}
+    volumes:
+      - ./Educacion_radiografia/static:/app/static
+      - ./Educacion_radiografia/templates:/app/templates
+      - ./Educacion_radiografia/cache_dir:/app/cache_dir
+    networks:
+      - imss-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Servicio Simulación
+  servicio-simulacion:
+    build:
+      context: ./Simulacion
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5003"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_PORT=5003
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GCP_MEDGEMMA_ENDPOINT=${GCP_MEDGEMMA_ENDPOINT}
+      - GCP_MEDGEMMA_SERVICE_ACCOUNT_KEY=${GCP_MEDGEMMA_SERVICE_ACCOUNT_KEY}
+    volumes:
+      - ./Simulacion/cache:/app/cache
+      - ./Simulacion/frontend/build:/app/frontend/build
+    networks:
+      - imss-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Servicio Radiografías de Tórax
+  servicio-radiografias:
+    build:
+      context: ./radiografias_torax
+      dockerfile: Dockerfile
+    ports:
+      - "5004:5004"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_PORT=5004
+      - LM_STUDIO_URL=${LM_STUDIO_URL}
+      - CHROMA_DB_PATH=/app/data/chroma_db
+      - CACHE_DIR=/app/data/cache
+    volumes:
+      - ./radiografias_torax/backend/data:/app/data
+      - ./radiografias_torax/backend/chroma_db_store:/app/data/chroma_db
+      - ./radiografias_torax/backend/persistent_cache:/app/data/cache
+      - ./radiografias_torax/frontend/dist:/app/frontend/dist
+    networks:
+      - imss-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5004/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Base de datos Redis para cache compartido (opcional)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - imss-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Nginx para load balancing (opcional para producción)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - gateway
+    networks:
+      - imss-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  imss-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

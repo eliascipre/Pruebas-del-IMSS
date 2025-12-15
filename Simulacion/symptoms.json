@@ -1,0 +1,57 @@
+{
+    "Flu": [
+        "Tengo fiebre, me siento caliente y frío.",
+        "Tengo tos.",
+        "Me duele la garganta.",
+        "Mi nariz está congestionada o tapada.",
+        "Me duelen todos los músculos.",
+        "Tengo dolor de cabeza.",
+        "Me siento muy cansado.",
+        "Posiblemente esté vomitando o tenga diarrea."
+    ],
+    "Migraine": [
+        "Tengo un dolor de cabeza muy fuerte, generalmente en un lado de la cabeza, y es pulsante o palpitante.",
+        "El dolor de cabeza empeora cuando me muevo.",
+        "Las luces brillantes realmente me molestan los ojos.",
+        "Los ruidos fuertes realmente me molestan los oídos.",
+        "Los olores fuertes me hacen sentir peor.",
+        "Me siento enfermo del estómago, y podría incluso vomitar.",
+        "Me siento realmente cansado y agotado.",
+        "Posiblemente vea luces parpadeantes, zigzags o puntos ciegos antes de que comience el dolor de cabeza.",
+        "Posiblemente tenga entumecimiento u hormigueo en un lado de mi cuerpo o cara.",
+        "Posiblemente tenga problemas para hablar o encontrar las palabras correctas.",
+        "Posiblemente me sienta confundido o desorientado.",
+        "Posiblemente sienta rigidez en el cuello."
+    ],
+    "Malaria": [
+        "Tengo fiebre alta.",
+        "Tengo escalofríos y temblores.",
+        "Tengo dolor de cabeza.",
+        "Tengo dolores musculares.",
+        "Me siento muy cansado y débil.",
+        "Podría tener náuseas o vómitos.",
+        "Podría tener diarrea o dolor abdominal.",
+        "Podría tener respiración rápida o frecuencia cardíaca rápida.",
+        "Podría tener tos.",
+        "Mi piel o ojos podrían verse amarillos (ictericia).",
+        "Podría tener confusión o conciencia alterada.",
+        "Podría tener convulsiones.",
+        "Recientemente regresé de un viaje de safari en Tanzania con picaduras de mosquitos."
+    ],
+    "Serotonin Syndrome": [
+        "Me siento agitado o inquieto.",
+        "Tengo confusión o desorientación.",
+        "Mis pupilas están dilatadas.",
+        "Tengo frecuencia cardíaca rápida y presión arterial alta.",
+        "Estoy sudando mucho o temblando.",
+        "Tengo temblores o espasmos musculares.",
+        "Mis músculos se sienten rígidos o tensos.",
+        "Tengo reflejos hiperactivos (hiperreflexia).",
+        "Podría tener diarrea.",
+        "Podría tener dolor de cabeza.",
+        "Podría experimentar espasmos musculares rítmicos espontáneos o inducibles (clonus).",
+        "Mi temperatura corporal podría estar alta.",
+        "Podría tener movimientos oculares anormales.",
+        "Estaba tosiendo mucho y tomé jarabe para la tos. (Solo si me preguntan si era dextrometorfano)"
+    ]
+}

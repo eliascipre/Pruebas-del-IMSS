@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: chroma-data-pvc
+  namespace: imss-ai-suite
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cache-data-pvc
+  namespace: imss-ai-suite
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data-pvc
+  namespace: imss-ai-suite
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: standard
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: imss-ai-suite-ingress
+  namespace: imss-ai-suite
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  - host: imss-ai.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: gateway-service
+            port:
+              number: 80
+  - host: api.imss-ai.local
+    http:
+      paths:
+      - path: /chatbot
+        pathType: Prefix
+        backend:
+          service:
+            name: servicio-chatbot-service
+            port:
+              number: 5001
+      - path: /educacion
+        pathType: Prefix
+        backend:
+          service:
+            name: servicio-educacion-service
+            port:
+              number: 5002
+      - path: /simulacion
+        pathType: Prefix
+        backend:
+          service:
+            name: servicio-simulacion-service
+            port:
+              number: 5003
+      - path: /radiografias
+        pathType: Prefix
+        backend:
+          service:
+            name: servicio-radiografias-service
+            port:
+              number: 5004
